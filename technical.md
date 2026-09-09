@@ -174,8 +174,8 @@ While Q is not empty:
 ### 4.2 Degree Centrality
 Measures local connectivity density.
 For node $v \in V$:
-$$\text{deg}(v) = |\{u \in V \mid (u, v) \in E\}|$$
-$$\text{deg}_{\text{norm}}(v) = \frac{\text{deg}(v)}{|V| - 1}$$
+$$\mathrm{deg}(v) = |\{u \in V \mid (u, v) \in E\}|$$
+$$\mathrm{deg}_{\mathrm{norm}}(v) = \frac{\mathrm{deg}(v)}{|V| - 1}$$
 
 ### 4.3 Betweenness Centrality (Brandes' Algorithm)
 Identifies **critical network bridges, brokers, and cut-vertices** who control information flow between disconnected criminal factions.
@@ -189,7 +189,7 @@ Maintains path counts $\sigma[w]$ and dependencies $\delta[v]$ using BFS queues 
 $$\delta_{s\bullet}(v) = \sum_{w: v \in P_s(w)} \frac{\sigma_s(v)}{\sigma_s(w)} \left(1 + \delta_{s\bullet}(w)\right)$$
 
 Normalized for undirected graphs:
-$$C_B^{\text{norm}}(v) = \frac{C_B(v)}{(|V|-1)(|V|-2)}$$
+$$C_B^{\mathrm{norm}}(v) = \frac{C_B(v)}{(|V|-1)(|V|-2)}$$
 
 ### 4.4 Community Detection (Modularity & Label Propagation)
 Partitions the criminal network into syndicate cells, gangs, and operational clusters.
@@ -217,18 +217,18 @@ Discovers covert, unrecorded associations between persons of interest who share 
 For non-adjacent node pair $(u, v) \notin E$ with common neighbor set $\Gamma(u, v) = N(u) \cap N(v)$:
 
 1. **Jaccard Similarity Coefficient**:
-   $$S_{\text{Jaccard}}(u, v) = \frac{|\Gamma(u, v)|}{|N(u) \cup N(v)|}$$
+   $$S_{\mathrm{Jaccard}}(u, v) = \frac{|\Gamma(u, v)|}{|N(u) \cup N(v)|}$$
 
 2. **Resource Allocation (RA) Index**:
    Penalizes high-degree mutual contacts to reward niche mutual connections:
-   $$S_{\text{RA}}(u, v) = \sum_{z \in \Gamma(u, v)} \frac{1}{|N(z)|}$$
+   $$S_{\mathrm{RA}}(u, v) = \sum_{z \in \Gamma(u, v)} \frac{1}{|N(z)|}$$
 
 3. **Adamic-Adar (AA) Index**:
    Logarithmic degree attenuation:
-   $$S_{\text{AA}}(u, v) = \sum_{z \in \Gamma(u, v)} \frac{1}{\log |N(z)|}$$
+   $$S_{\mathrm{AA}}(u, v) = \sum_{z \in \Gamma(u, v)} \frac{1}{\log |N(z)|}$$
 
 4. **Composite Prediction Score**:
-   $$S_{\text{composite}} = \min\left(0.98, \; 0.40 \cdot S_{\text{Jaccard}} + 0.35 \cdot \min(1, S_{\text{RA}}) + 0.25 \cdot \min\left(1, \frac{S_{\text{AA}}}{3}\right)\right)$$
+   $$S_{\mathrm{composite}} = \min\left(0.98, \; 0.40 \cdot S_{\mathrm{Jaccard}} + 0.35 \cdot \min(1, S_{\mathrm{RA}}) + 0.25 \cdot \min\left(1, \frac{S_{\mathrm{AA}}}{3}\right)\right)$$
 
 ---
 
@@ -244,10 +244,10 @@ D(i, j-1) + 1 \\
 D(i-1, j-1) + \mathbb{I}(s_1[i] \neq s_2[j])
 \end{cases}$$
 Normalized similarity score:
-$$\text{Sim}_{\text{Lev}}(s_1, s_2) = 1 - \frac{D(|s_1|, |s_2|)}{\max(|s_1|, |s_2|)}$$
+$$\mathrm{Sim}_{\mathrm{Lev}}(s_1, s_2) = 1 - \frac{D(|s_1|, |s_2|)}{\max(|s_1|, |s_2|)}$$
 
 ### 5.2 Initial & Anagram Heuristics
-Tokenizes names into first, middle, and surname components. If surnames have $\text{Sim}_{\text{Lev}} > 0.85$ and first initials match ($s_1[0] = s_2[0]$), flags abbreviation equivalence with a baseline similarity of $0.45$.
+Tokenizes names into first, middle, and surname components. If surnames have $\mathrm{Sim}_{\mathrm{Lev}} > 0.85$ and first initials match ($s_1[0] = s_2[0]$), flags abbreviation equivalence with a baseline similarity of $0.45$.
 
 ### 5.3 Multi-Signal Confidence Scoring & Conflict Penalization
 - **Phone Number Match**: Strips non-digits; matching suffix/exact sequence adds $+0.45$. Mismatched verified numbers penalize $-0.15$.
@@ -262,15 +262,15 @@ Tokenizes names into first, middle, and surname components. If surnames have $\t
 Pattern detection ([`anomalyDetectors.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/patterns/anomalyDetectors.ts)) executes graph rule traversal across nodes and edges:
 
 ### 6.1 Rapid Financial Layering (A → B → C)
-Finds directed sequences of fund transfers:
-$$\exists \, e_1, e_2 \in E \quad \text{such that} \quad \text{predicate}(e_1) = \text{predicate}(e_2) = \text{TRANSFERRED\_FUNDS}$$
-where $\text{target}(e_1) = \text{source}(e_2)$ and $\text{source}(e_1) \neq \text{target}(e_2)$. Flags structured capital routing through nominee accounts.
+Finds directed sequences of fund transfers where relationship predicate is `TRANSFERRED_FUNDS`:
+$$\exists \, e_1, e_2 \in E \quad \text{such that} \quad \mathrm{target}(e_1) = \mathrm{source}(e_2) \quad \text{and} \quad \mathrm{source}(e_1) \neq \mathrm{target}(e_2)$$
+Flags structured capital routing through nominee accounts.
 
 ### 6.2 Pre-Incident Communication Burst
 Filters communication relationships (`CALLED`, `COMMUNICATED_WITH`) where interaction frequency $w \ge 8$ within the 72-hour temporal pre-incident window.
 
 ### 6.3 Geographic Scene Proximity Anomaly
-Flags relationships where $\text{predicate} = \text{LOCATED\_AT}$ connecting a person of interest to the physical sector of the crime scene during the incident timeframe.
+Flags relationships where predicate is `LOCATED_AT` connecting a person of interest to the physical sector of the crime scene during the incident timeframe.
 
 ### 6.4 Offshore Shell Structuring
 Detects organizations tagged as non-operational offshore entities registered in zero-tax corporate registries (e.g. BVI, Tortola, Seychelles) that disburse capital immediately after receipt.
@@ -282,7 +282,7 @@ Detects organizations tagged as non-operational offshore entities registered in 
 ### 7.1 Groq Cloud LLM Integration
 - **Primary Model**: `openai/gpt-oss-120b` (high-parameter reasoning for multi-step entity extraction and hypothesis generation).
 - **Fast Model**: `openai/gpt-oss-20b` (sub-200ms conversational inference).
-- **Latency**: End-to-end execution typically under $400\text{ms}$.
+- **Latency**: End-to-end execution typically under 400ms.
 
 ### 7.2 Prompt Injection Neutralization & Sanitization
 Document text from seized suspect phones or anonymous tips is inherently untrusted. The sanitization layer ([`sanitize.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/ai/sanitize.ts)):
@@ -353,9 +353,9 @@ Performance metrics recorded in [`graphScalability.test.ts`](file:///Users/abhin
 
 | Graph Size | Operations Evaluated | Benchmark Target | Measured Execution |
 |---|---|---|---|
-| **100 Nodes** | Shortest path + Degree + Louvain community | $< 200\text{ms}$ | **~18ms** |
-| **1,000 Nodes** | Shortest path + Degree + Louvain (5 iter) | $< 1000\text{ms}$ | **~145ms** |
-| **5,000 Nodes** | Small-world graph pathfinding + Degree | $< 2500\text{ms}$ | **~380ms** |
+| **100 Nodes** | Shortest path + Degree + Louvain community | < 200ms | **~18ms** |
+| **1,000 Nodes** | Shortest path + Degree + Louvain (5 iter) | < 1000ms | **~145ms** |
+| **5,000 Nodes** | Small-world graph pathfinding + Degree | < 2500ms | **~380ms** |
 
 ---
 

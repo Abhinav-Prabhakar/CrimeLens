@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { InvestigationEntity, InvestigationRelationship, BoardCardType } from '@/lib/types/investigation';
+import { playPinSound, playYarnSnipSound, playPaperRustleSound } from '@/lib/ui/tactileAudio';
 
 interface CorkboardProps {
   entities: InvestigationEntity[];
@@ -311,8 +312,10 @@ export const InvestigationCorkboard: React.FC<CorkboardProps> = ({
           // Connecting mode
           if (!stateRef.current.connectingSourceId) {
             stateRef.current.connectingSourceId = hitId;
+            playPinSound();
           } else if (stateRef.current.connectingSourceId !== hitId) {
             onConnect(stateRef.current.connectingSourceId, hitId);
+            playYarnSnipSound();
             stateRef.current.connectingSourceId = null;
           }
           return;
@@ -320,6 +323,7 @@ export const InvestigationCorkboard: React.FC<CorkboardProps> = ({
 
         // Selection & Dragging
         onSelectEntity(hitId);
+        playPaperRustleSound();
         isDragging = true;
         draggedEntityId = hitId;
 

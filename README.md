@@ -77,27 +77,42 @@ Rule and graph heuristics detecting:
 
 ### 7. AI Investigator Assistant & Multi-Hypothesis Generator
 - Context-aware intelligence assistant grounded strictly in current case evidence.
+- **Rich Markdown Chat Interface**: Powered by `react-markdown` and `remark-gfm` supporting tables, bold/italic text, code blocks, and structured lists.
+- **One-Click Quick Action Chips**: Summarize dossier, draft FIR, generate alternative hypotheses, and probe missing links.
+- **Session Transcript Export**: Download full interrogation and reasoning logs as timestamped `.md` files.
 - Formulates **multiple alternative hypotheses** with supporting and contradicting observations.
 - Generates statutory FIR drafts and suggests potentially applicable sections under the **Bharatiya Nyaya Sanhita (BNS)** and Prevention of Money Laundering Act (PMLA) for prosecutor review.
 
-### 8. Case Management & Case Prioritization Ranking
+### 8. Tactile Audio Feedback & Immersive Noir Atmosphere
+- In-browser procedural Web Audio synthesizer providing realistic physical feedback:
+  - Metallic pin taps when establishing evidence coordinates.
+  - Plucking/snip sounds when connecting or cutting yarn threads.
+  - Paper rustling cues when picking up and repositioning evidence cards.
+- Dark crime-noir aesthetic adhering to strict investigative color coding and typography.
+
+### 9. Case Management & Case Prioritization Ranking
 - Create, manage, and switch between multi-case dossiers.
 - Configurable prioritization ranking based on public risk severity, urgency, solvability, and network entity density.
 
-### 9. Forensic Image & Object Analysis
+### 10. Forensic Image & Object Analysis
 - Visual evidence classification and vehicle license plate recognition with confidence intervals and uncertainty statements.
 
-### 10. Audit Trail & Chain of Custody
+### 11. Audit Trail & Chain of Custody
 - Immutable audit log recording every investigator action (case creation, entity edits, relationship confirmation, AI approvals).
 
-### 11. Offline-First IndexedDB Storage
+### 12. Offline-First IndexedDB Storage
 - All cases, dossiers, nodes, relationships, and audit logs persist locally in **IndexedDB** (`crimelens_investigation_db`).
 - Complete case backup and cross-team sharing via `.crimelens.json` export and import.
 - Operates seamlessly in air-gapped or low-connectivity tactical environments.
 
-### 12. Women Safety & Emergency Escalation
+### 13. Women Safety & Emergency Escalation
 - Trusted well-wisher circle registration.
 - One-touch emergency SOS simulation dispatching geolocated alerts to trusted contacts and the 1091 helpline.
+
+---
+
+## 📖 In-Depth Technical Specification
+For the complete mathematical formulations, algorithm pseudocode, graph complexity analyses, and prompt design schemas, refer to [`technical.md`](./technical.md).
 
 ---
 
