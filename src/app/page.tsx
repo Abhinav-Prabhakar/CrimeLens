@@ -44,6 +44,8 @@ export default function CrimeLensMainPage() {
     activeView,
     loading,
     dbError,
+    graphStatus,
+    caseSummaries,
     filterTypes,
     canUndo,
     canRedo,
@@ -245,6 +247,7 @@ export default function CrimeLensMainPage() {
         activeTool={activeTool}
         threadColor={threadColor}
         filterTypes={filterTypes}
+        graphStatus={graphStatus}
         canUndo={canUndo}
         canRedo={canRedo}
         onSelectView={setActiveView}
@@ -412,6 +415,7 @@ export default function CrimeLensMainPage() {
       <CaseSwitcherModal
         isOpen={isCasesOpen}
         activeCaseId={activeCase?.id || null}
+        summaries={caseSummaries}
         onClose={() => setIsCasesOpen(false)}
         onSelectCase={(caseId) => switchCase(caseId)}
         onCreateCase={async (data) => {

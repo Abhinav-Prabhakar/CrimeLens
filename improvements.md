@@ -157,3 +157,43 @@
 - `tests/unit/tipCredibility.test.ts` — heuristic bounds & corroboration.
 - `tests/unit/importBundle.test.ts` — bundle validation & collision re-ID.
 - All 18 pre-existing tests kept green.
+
+---
+
+## Part 3 — Follow-up: Neo4j as the Foundation (Architecture Pivot)
+
+> **Date:** 2026-09-10 · After the polish pass above, the storage architecture was upgraded:
+> CrimeLens is now **built on Neo4j** as the system of record — not an optional sync target.
+
+**What changed**
+
+- **Knowledge graph lives in Neo4j.** Cases, entities, relationships, documents, and timeline
+  events persist as a native property graph (`:Case`, `:Entity`, `:Document`, `:TimelineEvent`
+  nodes; investigative predicates — `CALLED`, `TRANSFERRED_FUNDS`, `OWNS`, … — as real
+  relationship types with full evidential properties on the edge). Uniqueness constraints and
+  lookup indexes are provisioned automatically.
+- **Server-side Graph API gateway** (`/api/graph/*`, 10 routes) backed by `neo4j-driver` v6.
+  All mutations (entity/relationship CRUD, identity merge, AI extraction commit with fuzzy
+  duplicate resolution, bundle import, seeding) execute server-side; credentials never reach the
+  client. Money-layering chains are now one Cypher traversal.
+- **IndexedDB demoted to a resilience layer**: a write-through cache mirrors the authoritative
+  state for offline boot (read-only, with an explicit banner — zero-fallback, no silent
+  divergence), plus the deliberately local stores (append-only audit chain, intel tips, safety
+  contacts). The `deleteEntity` cascade now uses the `sourceId`/`targetId` indexes instead of a
+  full store scan.
+- **Store rewrite**: `useInvestigationStore` calls the Graph API first and merges the returned
+  authoritative records into state; case portfolio summaries (counts + anomaly load) are computed
+  server-side and feed the prioritization ranking via a new counts-based scoring variant; undo /
+  redo reconciles snapshots against Neo4j by ID diff; the status bar shows the live connection
+  state.
+- **Setup**: local Homebrew / Docker / Desktop Neo4j or AuraDB; `NEO4J_URI`, `NEO4J_USERNAME`,
+  `NEO4J_PASSWORD`, `NEO4J_DATABASE` in `.env.local`.
+
+**Verified live (2026-09-10)**: seed → 1 case / 10 entities / 10 typed edges; commit-extraction
+folded a duplicate "Daniel Vance" (alias union, no duplicate node) and created a new witness with
+a `LOCATED_AT` edge; entity PATCH/DELETE and relationship create/delete round-trips confirmed via
+both the API and raw Cypher through `neo4j-cli`.
+
+**Tests**: 46 passing (adds `graphSyncTransform.test.ts` — Neo4j property round-trips,
+injection-safe predicate whitelisting, malformed-JSON degradation — and counts-based
+prioritization coverage).

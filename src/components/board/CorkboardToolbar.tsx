@@ -35,6 +35,7 @@ interface ToolbarProps {
   activeTool: 'select' | 'connect' | 'lasso' | 'pan';
   threadColor: 'crimson' | 'twine' | 'cobalt' | 'shadow';
   filterTypes: Record<string, boolean>;
+  graphStatus: 'checking' | 'online' | 'offline';
   canUndo: boolean;
   canRedo: boolean;
   onSelectView: (view: 'board' | 'graph' | 'patterns' | 'timeline') => void;
@@ -72,6 +73,7 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
   activeTool,
   threadColor,
   filterTypes,
+  graphStatus,
   canUndo,
   canRedo,
   onSelectView,
@@ -402,9 +404,25 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
         </div>
 
         <div className="flex items-center gap-4 text-[10px] text-noir-500">
-          <span className="text-emerald-500 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            INDEXEDDB OFFLINE-READY
+          <span
+            className={`flex items-center gap-1 ${
+              graphStatus === 'online'
+                ? 'text-emerald-500'
+                : graphStatus === 'offline'
+                ? 'text-crimson'
+                : 'text-amber-accent'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                graphStatus === 'online'
+                  ? 'bg-emerald-500'
+                  : graphStatus === 'offline'
+                  ? 'bg-crimson animate-pulse'
+                  : 'bg-amber-accent animate-pulse'
+              }`}
+            />
+            NEO4J GRAPH LINK: {graphStatus === 'online' ? 'ONLINE' : graphStatus === 'offline' ? 'OFFLINE' : 'CHECKING...'}
           </span>
           <span>Tip: Drag empty cork to pan • Scroll to zoom</span>
         </div>

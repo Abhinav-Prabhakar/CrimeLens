@@ -36,11 +36,13 @@
    - [7.6 Temporal Analysis Engine](#76-temporal-analysis-engine)
    - [7.7 Case Prioritization Engine](#77-case-prioritization-engine)
    - [7.8 Tip Credibility Triage](#78-tip-credibility-triage)
-8. [Offline-First Storage Engine & Reactive Store](#8-offline-first-storage-engine--reactive-store)
-   - [8.1 IndexedDB Schema & Indexes](#81-indexeddb-schema--indexes)
-   - [8.2 Bi-directional Board ↔ Graph Synchronization](#82-bi-directional-board--graph-synchronization)
-   - [8.3 Immutable Audit Trail & Chain of Custody](#83-immutable-audit-trail--chain-of-custody)
-   - [8.4 Case Bundle Export / Import](#84-case-bundle-export--import)
+8. [Neo4j Graph Storage Engine & Local Resilience Layer](#8-neo4j-graph-storage-engine--local-resilience-layer)
+   - [8.1 Property Graph Model & Constraints](#81-property-graph-model--constraints)
+   - [8.2 Graph API Gateway](#82-graph-api-gateway)
+   - [8.3 Reactive Store & Write-Through Cache](#83-reactive-store--write-through-cache)
+   - [8.4 Local Resilience Stores (IndexedDB)](#84-local-resilience-stores-indexeddb)
+   - [8.5 Immutable Audit Trail & Chain of Custody](#85-immutable-audit-trail--chain-of-custody)
+   - [8.6 Case Bundle Export / Import](#86-case-bundle-export--import)
 9. [Automated Verification & Scalability Benchmarks](#9-automated-verification--scalability-benchmarks)
    - [9.1 Test Pyramid](#91-test-pyramid)
    - [9.2 Graph Scalability Stress Benchmarks (up to 5,000 nodes)](#92-graph-scalability-stress-benchmarks-up-to-5000-nodes)
@@ -52,11 +54,11 @@
 
 CrimeLens is an investigative intelligence platform designed to eliminate data fragmentation across First Information Reports (FIRs), interrogation transcripts, Call Detail Records (CDRs), financial ledgers, and forensic physical evidence.
 
-The architecture operates on a **dual-view synchronized state model**:
+The architecture operates on a **dual-view synchronized state model** backed by a **Neo4j property graph as the system of record**:
 - **Spatial Intuition View**: A 3D tactile detective corkboard rendered via WebGL/Three.js with realistic Verlet yarn physics, pins, and polaroids.
 - **Analytical Intelligence View**: An in-browser topological knowledge graph executing centrality heatmaps, community detection, shortest-path calculation, and link prediction.
 
-Both views read from and write to a single source of truth: an offline-first **IndexedDB** database synchronized with serverless **Groq Cloud AI APIs** on Next.js 16.
+Both views read from and write to a single source of truth: the **Neo4j knowledge graph**, accessed through server-side Next.js API routes and synchronized with serverless **Groq Cloud AI APIs**. A write-through IndexedDB cache mirrors the authoritative state for resilient local boot, while the append-only audit trail, public intel submissions, and safety contacts remain deliberately local stores.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -64,7 +66,7 @@ Both views read from and write to a single source of truth: an offline-first **I
 │                                                                                        │
 │  ┌───────────────────────────────┐                  ┌───────────────────────────────┐  │
 │  │   3D Tactical Corkboard       │                  │   2D Force Knowledge Graph    │  │
-│  │  (Three.js, Verlet Ropes,     │◄─ Bi-directional ┼─►│  (Canvas Force Graph Canvas,  │  │
+│  │  (Three.js, Verlet Ropes,     │◄─ Bi-directional ┼─►│  (Canvas Force Graph,        │  │
 │  │   Pins, Textures, Drag/Zoom)  │    State Sync    │   Louvain clusters, Paths)    │  │
 │  └──────────────┬────────────────┘                  └───────────────┬───────────────┘  │
 │                 │                                                   │                  │
@@ -72,31 +74,38 @@ Both views read from and write to a single source of truth: an offline-first **I
 │  ┌──────────────────────────────────────────────────────────────────────────────────┐  │
 │  │                  Unified Investigation State & Reactive Store                    │  │
 │  │  (Active Case, Graph Projection, Filter Pipeline, History Stack Undo/Redo)       │  │
-│  └──────────────────────────────────────┬───────────────────────────────────────────┘  │
-│                                         │                                              │
-│                 ┌───────────────────────┴───────────────────────┐                      │
-│                 ▼                                               ▼                      │
+│  └──────────────────────────────┬───────────────────────────────┬───────────────────┘  │
+│                                 │                               │                      │
+│                                 ▼                               ▼                      │
 │  ┌──────────────────────────────┐              ┌──────────────────────────────────┐    │
-│  │  In-Browser Analytics Engine │              │     Offline-First Persistence    │    │
-│  │  - Dijkstra Shortest Path    │              │  - IndexedDB (Cases, Evidences,  │    │
-│  │  - Degree & Betweenness      │              │    Entities, Relationships, Logs)│    │
-│  │  - Louvain Community Detect  │              │  - LocalStorage (User Prefs, UI) │    │
+│  │  In-Browser Analytics Engine │              │   Local Resilience Layer         │    │
+│  │  - Dijkstra Shortest Path    │              │  - IndexedDB write-through cache │    │
+│  │  - Degree & Betweenness      │              │  - Append-only audit chain       │    │
+│  │  - Louvain Community Detect  │              │  - Intel tips & safety contacts  │    │
 │  │  - Link Prediction (Jaccard) │              │  - Export / Import JSON & PDF    │    │
 │  │  - Temporal Diff Engine      │              └──────────────────────────────────┘    │
-│  └──────────────┬───────────────┘                                                      │
-└─────────────────┼──────────────────────────────────────────────────────────────────────┘
-                  │ HTTPS (REST / Serverless)
-                  ▼
+│  └──────────────────────────────┘                                                      │
+└────────────────────────┬───────────────────────────────────────────────────────────────┘
+                         │ HTTPS (REST / Serverless)
+                         ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                NEXT.JS BACKEND RUNTIME                                 │
 │                                                                                        │
-│  ┌─────────────────────────────────┐        ┌──────────────────────────────────────┐  │
-│  │     Document Ingestion API      │        │       AI Intelligence Gateway        │  │
-│  │  - Input sanitization           │───────►│  - Groq API (`openai/gpt-oss-120b`)  │  │
-│  │  - Prompt injection shielding   │        │  - Strict JSON normalization schema  │  │
-│  │  - Multi-document parser        │        │  - Zero fallbacks; explicit errors   │  │
-│  └─────────────────────────────────┘        └──────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+│  ┌─────────────────────────┐  ┌──────────────────────────┐  ┌───────────────────────┐  │
+│  │  Document Ingestion API │  │   Graph API Gateway      │  │ AI Intelligence       │  │
+│  │  - Input sanitization   │  │  - /api/graph/* routes   │  │ Gateway               │  │
+│  │  - Injection shielding  │─►│  - Neo4j driver v6       │◄─│ - Groq LLMs + vision  │  │
+│  │  - Multi-doc parser     │  │  - Constraint bootstrap  │  │ - Zero fallbacks      │  │
+│  └─────────────────────────┘  └────────────┬─────────────┘  └───────────────────────┘  │
+│                                            │ Bolt                                       │
+└────────────────────────────────────────────┼────────────────────────────────────────────┘
+                                             ▼
+                       ┌──────────────────────────────────────┐
+                       │   NEO4J PROPERTY GRAPH (SOR)         │
+                       │  (:Case)-[:HAS_ENTITY]->(:Entity)    │
+                       │  (:Entity)-[:CALLED|OWNS|...]->(...) │
+                       │  (:Case)-[:HAS_DOCUMENT|HAS_EVENT]-> │
+                       └──────────────────────────────────────┘
 ```
 
 ---
@@ -111,8 +120,9 @@ Both views read from and write to a single source of truth: an offline-first **I
 | **Icons** | Lucide React | 1.43.0 | Minimalist tactical UI iconography |
 | **3D Rendering** | Three.js | 0.185.1 | WebGL corkboard stage, perspective camera rig, lighting |
 | **Animation Engine** | GSAP | 3.15.0 | Camera interpolation and smooth stage damping |
-| **AI LLM Gateway** | Groq Cloud SDK | 1.6.0 | Sub-second inference (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`) |
-| **Persistence** | IndexedDB via `idb` | 8.0.3 | Offline-first relational storage (cases, nodes, links, logs) |
+| **AI LLM Gateway** | Groq Cloud SDK | 1.6.0 | Sub-second inference (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`, Llama 4 Scout vision) |
+| **Graph Database** | Neo4j (Community / Aura) via `neo4j-driver` | 2025.x / driver 6.2 | System of record for cases, entities, relationships, documents, timeline events |
+| **Local Layer** | IndexedDB via `idb` | 8.0.3 | Write-through cache, append-only audit chain, intel tips, safety contacts |
 | **Validation** | Zod | 4.5.4 | Strict schema definition and LLM output parsing |
 | **Test Suite** | Vitest + JSDOM | 3.2.7 | Fast unit, stress, and scalability benchmarking |
 
@@ -358,37 +368,82 @@ with defaults $w = (0.40, 0.20, 0.25, 0.15)$, priority weights $\rho \in \{0.2, 
 
 ---
 
-## 8. Offline-First Storage Engine & Reactive Store
+## 8. Neo4j Graph Storage Engine & Local Resilience Layer
 
-### 8.1 IndexedDB Schema & Indexes
-Database: `crimelens_investigation_db` (Version 2 via `idb`):
+The knowledge graph is persisted as a **native Neo4j property graph** — the system of record for
+all case data. The browser never talks Bolt: every read and write flows through the
+`/api/graph/*` Next.js route handlers ([`neo4j.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/graph/neo4j.ts)),
+which hold the driver singleton (`neo4j-driver` v6, `disableLosslessIntegers`, connection pool of 5
+for serverless compatibility) and provision the schema idempotently on first use. Unconfigured
+credentials or an unreachable database surface as explicit HTTP 503 errors — zero-fallback applies
+to storage exactly as it does to AI.
 
-| Object Store | Primary Key | Secondary Indexes | Description |
-|---|---|---|---|
-| `cases` | `id` | — | Case metadata, lead officer, priority ranking |
-| `entities` | `id` | `caseId`, `type` | Nodes and board evidence cards |
-| `relationships` | `id` | `caseId`, `sourceId`, `targetId` | Directed edges and yarn connections |
-| `documents` | `id` | `caseId` | Raw ingested files and extraction staging records |
-| `audit_logs` | `id` | `caseId`, `timestamp` | Immutable chain of custody action log |
-| `intel_submissions` | `id` | `submittedAt` | Public anonymous tips and credibility triage |
-| `timeline_events` (v2) | `id` | `caseId` | Committed AI extraction + case chronology events |
-| `safety_contacts` (v2) | `id` | — | Women safety trusted well-wisher circle (user-scoped) |
+### 8.1 Property Graph Model & Constraints
 
-**LocalStorage**: the active case ID (`crimelens.activeCaseId`) is persisted and restored on boot (design.md §7), so reloads land on the case the investigator left.
+| Graph Element | Model | Key Properties |
+|---|---|---|
+| `(:Case)` | Case dossier node | `id`, `title`, `caseNumber`, `priority`, `incidentDate`, `tags`, … |
+| `(:Entity)` | Every board card / graph node | `id`, `caseId`, `type`, `label`, `aliases[]`, `attributesJson`, `confidence`, `status`, `visualType`, `boardX/Y/Rotation`, `provenanceJson` |
+| `(:Document)` | Ingested source record | `id`, `caseId`, `title`, `documentType`, `rawText`, extraction counts |
+| `(:TimelineEvent)` | Chronology event node | `id`, `caseId`, `timestamp`, `category`, `involvedEntityIds[]`, `source` |
+| `[:HAS_ENTITY]`, `[:HAS_DOCUMENT]`, `[:HAS_EVENT]` | Case → record ownership | — |
+| `[:CALLED]`, `[:TRANSFERRED_FUNDS]`, `[:OWNS]`, … | **Investigative predicates as native relationship types** | `id`, `caseId`, `predicate`, `weight`, `confidence`, `status`, `threadColor`, `validFrom/To`, `provenanceJson` |
 
-### 8.2 Bi-directional Board ↔ Graph Synchronization
+Because predicates are real relationship types, the evidential network is directly queryable in
+Cypher — e.g. the entire money-layering chain is one traversal:
+`MATCH (a:Entity)-[:TRANSFERRED_FUNDS*2]->(c:Entity) RETURN a, c`.
+
+**Automatically provisioned schema** (idempotent `IF NOT EXISTS`): uniqueness constraints on
+`Case.id`, `Entity.id`, `Document.id`, `TimelineEvent.id`; lookup indexes on `Entity.caseId`,
+`Document.caseId`, `TimelineEvent.caseId`.
+
+**Property mapping** ([`syncTransform.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/graph/syncTransform.ts)):
+Neo4j properties must be primitives, so nested `attributes`/`provenance` maps are JSON-encoded and
+`boardPosition` is flattened to `boardX/boardY/boardRotation`; relationship types are produced by a
+whitelist sanitizer (`predicateToRelType`) — never string interpolation of raw input — because
+Cypher cannot parameterize types.
+
+### 8.2 Graph API Gateway
+
+| Route | Verbs | Purpose |
+|---|---|---|
+| `/api/graph/status` | GET | Connectivity + case/entity/edge counts (drives the status bar) |
+| `/api/graph/cases` | GET/POST/PATCH/DELETE | Portfolio list (with per-case counts + anomaly load), create, update, purge |
+| `/api/graph/case` | GET | Full authoritative case state (case, entities, rels, docs, events) |
+| `/api/graph/entities` | POST/PATCH/DELETE | Entity CRUD; DELETE cascades via `DETACH DELETE` |
+| `/api/graph/relationships` | POST/PATCH/DELETE | Edge CRUD; predicate changes recreate the typed edge |
+| `/api/graph/merge` | POST | Identity merge in one transaction (edges recreated against the kept entity, provenance intact) |
+| `/api/graph/commit-extraction` | POST | Human-approved AI extraction: server-side fuzzy duplicate resolution, collision-free placement, document + timeline persistence |
+| `/api/graph/timeline-events` | POST | Timeline event upsert |
+| `/api/graph/import` | POST | Validated `.crimelens.json` bundle import into the graph |
+| `/api/graph/seed` | POST | Demo case bootstrap (`force: true` re-seeds for the reset action) |
+
+### 8.3 Reactive Store & Write-Through Cache
 Managed via the unified hook [`useInvestigationStore.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/store/useInvestigationStore.ts):
-- Card position updates on the 3D corkboard mutate coordinate attributes in IndexedDB (position-only updates skip audit noise).
-- Graph analysis updates or newly approved AI extractions project cards onto the 3D board using collision-free spiral placement.
-- Both views read the same `entities`/`relationships` state and the same `filterTypes` projection; case switching (`switchCase`) reloads all scoped stores without a page reload.
-- **Undo/Redo**: mutating actions push `{entities, relationships}` snapshots onto a 40-deep history stack (⌘Z / ⌘⇧Z); undo/redo restores the snapshot and reconciles IndexedDB by diffing IDs (deleting removed records, re-writing restored ones).
+- Mutations call the Graph API first; the returned authoritative records update React state, then
+  mirror into the IndexedDB cache (`replaceCaseScope`) for resilient boot.
+- If Neo4j is unreachable at boot, the UI hydrates from the cache in read-only mode with an
+  explicit banner — mutations are refused rather than silently diverging (zero-fallback).
+- Card position updates skip audit noise; case switching reloads scoped state without a page
+  reload; the active case ID persists in localStorage.
+- **Undo/Redo** (⌘Z / ⌘⇧Z): 40-deep snapshot stack reconciled against Neo4j by ID diff (deletes
+  removed records, re-upserts restored ones with their original identities).
 
-### 8.3 Immutable Audit Trail & Chain of Custody
+### 8.4 Local Resilience Stores (IndexedDB `crimelens_investigation_db`)
+
+| Object Store | Role |
+|---|---|
+| `cases`, `entities`, `relationships`, `documents`, `timeline_events` | Write-through mirror of the Neo4j state (offline boot view) |
+| `audit_logs` | Append-only chain of custody — deliberately never rewritten by cache sync |
+| `intel_submissions` | Public tips + credibility triage (user-scoped) |
+| `safety_contacts` | Women safety trusted circle (user-scoped) |
+
+### 8.5 Immutable Audit Trail & Chain of Custody
 Every investigator operation writes an immutable log record with timestamp, investigator ID, target ID, and change summary. Covered actions: `case_created`, `case_updated`, `case_deleted`, `entity_created`, `entity_updated`, `entity_deleted`, `entities_merged`, `relationship_created`, `relationship_confirmed`, `relationship_deleted`, `document_ingested`, `ai_extraction_approved`, `report_generated`, `link_prediction_confirmed`, `bundle_exported`, `bundle_imported`, `intel_triaged`, `intel_promoted`, and `sos_dispatched`.
 
-### 8.4 Case Bundle Export / Import
+### 8.6 Case Bundle Export / Import
 - **Export** produces a `.crimelens.json` bundle (schema v1.1.0) containing the case record, entities, relationships, documents, audit logs, timeline events, and case-scoped intel submissions.
-- **Import** ([`importExport.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/storage/importExport.ts)) validates structure (system marker, case record, referential integrity of every relationship against the entity set — dangling references abort with an actionable `BundleValidationError`), then **re-scopes every record to a fresh `<id>_imported_<ts>` identity** when the bundle's case ID already exists locally, so live investigations are never overwritten. Imports switch to the restored case and are audited.
+- **Import** ([`importExport.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/storage/importExport.ts)) validates structure (system marker, case record, referential integrity of every relationship against the entity set — dangling references abort with an actionable `BundleValidationError`), then **re-scopes every record to a fresh `<id>_imported_<ts>` identity** when the bundle's case ID already exists in the graph, so live investigations are never overwritten. Imports write through the same Graph API upserts, switch to the restored case, and are audited.
 
 ---
 
@@ -401,14 +456,15 @@ Executed via Vitest (`pnpm test`):
  ✓ tests/unit/anomalyDetectors.test.ts (5 tests)
  ✓ tests/unit/graphAlgorithms.test.ts (5 tests)
  ✓ tests/unit/sanitize.test.ts (3 tests)
- ✓ tests/unit/casePrioritization.test.ts (4 tests)
+ ✓ tests/unit/casePrioritization.test.ts (7 tests)
  ✓ tests/unit/timelineDerivation.test.ts (5 tests)
  ✓ tests/unit/tipCredibility.test.ts (4 tests)
  ✓ tests/unit/importBundle.test.ts (5 tests)
+ ✓ tests/unit/graphSyncTransform.test.ts (6 tests)
  ✓ tests/stress/graphScalability.test.ts (3 tests)
 
- Test Files  9 passed (9)
-      Tests  38 passed (38)
+ Test Files  10 passed (10)
+      Tests  46 passed (46)
 ```
 
 ### 9.2 Graph Scalability Stress Benchmarks (up to 5,000 nodes)
@@ -424,8 +480,9 @@ Performance metrics recorded in [`graphScalability.test.ts`](file:///Users/abhin
 
 ## 10. Production Deployment & Security Guarantees
 
-1. **Zero Secret Leakage**: The Groq API key resides exclusively in serverless environment variables (`GROQ_API_KEY`). Git repositories and client bundles contain zero plaintext secrets.
-2. **Deterministic Vercel Build**: Pre-configured with Next.js Turbopack, strict type checking, and automatic edge routing.
-3. **Live Production Endpoints**:
+1. **Zero Secret Leakage**: The Groq API key (`GROQ_API_KEY`) and the Neo4j credentials (`NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`) reside exclusively in serverless environment variables. Git repositories and client bundles contain zero plaintext secrets; the browser reaches the graph only through the `/api/graph/*` server routes.
+2. **Graph Database Provisioning**: any Neo4j 5+ / 2025.x instance works — local (Homebrew, Docker, Desktop) or hosted (AuraDB, `neo4j+s://` URIs). Schema constraints and indexes are provisioned automatically on first connection; the demo case seeds itself when the database is empty.
+3. **Deterministic Vercel Build**: Pre-configured with Next.js Turbopack, strict type checking, and automatic edge routing. The Neo4j driver connection pool is sized for serverless (5 connections per instance).
+4. **Live Production Endpoints**:
    - **Production URL**: [https://crimelens-eight.vercel.app](https://crimelens-eight.vercel.app)
    - **GitHub Repository**: [https://github.com/Abhinav-Prabhakar/CrimeLens](https://github.com/Abhinav-Prabhakar/CrimeLens)

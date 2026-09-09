@@ -57,15 +57,31 @@ export function computeCasePriority(
   relationships: InvestigationRelationship[],
   weights: PrioritizationWeights = DEFAULT_PRIORITIZATION_WEIGHTS
 ): CasePriorityScore {
+  const anomalyCount = detectSuspiciousPatterns(entities, relationships, caseItem.incidentDate).length;
+  return computeCasePriorityFromCounts(
+    caseItem,
+    { entityCount: entities.length, relationshipCount: relationships.length, anomalyCount },
+    weights
+  );
+}
+
+/**
+ * Score a case from pre-computed graph counts (used for portfolio ranking, where
+ * per-case graph data is summarized server-side by the Neo4j API).
+ */
+export function computeCasePriorityFromCounts(
+  caseItem: InvestigationCase,
+  counts: { entityCount: number; relationshipCount: number; anomalyCount: number },
+  weights: PrioritizationWeights = DEFAULT_PRIORITIZATION_WEIGHTS
+): CasePriorityScore {
   // 1. Public risk severity (case-declared priority)
   const risk = PRIORITY_WEIGHT[caseItem.priority] ?? 0.2;
 
   // 2. Network entity density (solvability signal: more of the network is mapped)
-  const density = Math.min(1, entities.length / DENSITY_SATURATION);
+  const density = Math.min(1, counts.entityCount / DENSITY_SATURATION);
 
   // 3. Open anomaly load from pattern detectors
-  const anomalyCount = detectSuspiciousPatterns(entities, relationships, caseItem.incidentDate).length;
-  const anomaly = Math.min(1, anomalyCount / ANOMALY_SATURATION);
+  const anomaly = Math.min(1, counts.anomalyCount / ANOMALY_SATURATION);
 
   // 4. Urgency — exponential decay from the incident date
   let urgency = 0;
@@ -91,12 +107,12 @@ export function computeCasePriority(
       },
       {
         label: 'Network Density',
-        detail: `${entities.length} entities / ${relationships.length} links mapped`,
+        detail: `${counts.entityCount} entities / ${counts.relationshipCount} links mapped`,
         value: Number(density.toFixed(2)),
       },
       {
         label: 'Anomaly Load',
-        detail: `${anomalyCount} suspicious patterns currently open`,
+        detail: `${counts.anomalyCount} suspicious patterns currently open`,
         value: Number(anomaly.toFixed(2)),
       },
       {
@@ -111,6 +127,19 @@ export function computeCasePriority(
       },
     ],
   };
+}
+
+/**
+ * Rank case summaries produced by the Neo4j portfolio endpoint
+ * (case record + pre-computed entity/relationship/anomaly counts).
+ */
+export function rankCaseSummaries(
+  summaries: { caseItem: InvestigationCase; entityCount: number; relationshipCount: number; anomalyCount: number }[],
+  weights?: PrioritizationWeights
+): { caseItem: InvestigationCase; priority: CasePriorityScore }[] {
+  return summaries
+    .map((s) => ({ caseItem: s.caseItem, priority: computeCasePriorityFromCounts(s.caseItem, s, weights) }))
+    .sort((a, b) => b.priority.score - a.priority.score);
 }
 
 /**

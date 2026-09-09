@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeCasePriority, DEFAULT_PRIORITIZATION_WEIGHTS } from '../../src/lib/cases/prioritization';
+import {
+  computeCasePriority,
+  computeCasePriorityFromCounts,
+  rankCaseSummaries,
+  DEFAULT_PRIORITIZATION_WEIGHTS,
+} from '../../src/lib/cases/prioritization';
 import { InvestigationCase, InvestigationEntity, InvestigationRelationship } from '../../src/lib/types/investigation';
 
 const mockCase = (overrides: Partial<InvestigationCase> = {}): InvestigationCase => ({
@@ -85,5 +90,27 @@ describe('Case Prioritization Engine', () => {
     );
     expect(maxed.score).toBeLessThanOrEqual(1);
     expect(maxed.score).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should agree between array-based and counts-based scoring for the same graph', () => {
+    const entities = Array.from({ length: 20 }, (_, i) => mockEntity(`e${i}`));
+    const fromArrays = computeCasePriority(mockCase({ priority: 'high' }), entities, []);
+    const fromCounts = computeCasePriorityFromCounts(mockCase({ priority: 'high' }), {
+      entityCount: entities.length,
+      relationshipCount: 0,
+      anomalyCount: 0,
+    });
+    expect(fromCounts.score).toBeCloseTo(fromArrays.score, 2);
+  });
+
+  it('should rank portfolio summaries from Neo4j-side counts', () => {
+    const critical = mockCase({ id: 'c1', title: 'Critical', priority: 'critical', incidentDate: new Date().toISOString() });
+    const cold = mockCase({ id: 'c2', title: 'Cold', priority: 'low', incidentDate: '2020-01-01T00:00:00Z' });
+    const ranked = rankCaseSummaries([
+      { caseItem: cold, entityCount: 0, relationshipCount: 0, anomalyCount: 0 },
+      { caseItem: critical, entityCount: 30, relationshipCount: 40, anomalyCount: 6 },
+    ]);
+    expect(ranked[0].caseItem.id).toBe('c1');
+    expect(ranked[0].priority.factors).toHaveLength(4);
   });
 });

@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, FolderOpen, Plus, Trash2, BarChart3, TrendingUp } from 'lucide-react';
 import { InvestigationCase } from '@/lib/types/investigation';
-import { getAllCases, getEntitiesByCase, getRelationshipsByCase } from '@/lib/storage/db';
-import { rankCases } from '@/lib/cases/prioritization';
+import { CaseSummary } from '@/lib/graph/graphApi';
+import { rankCaseSummaries } from '@/lib/cases/prioritization';
 
 interface CaseSwitcherModalProps {
   isOpen: boolean;
   activeCaseId: string | null;
+  summaries: CaseSummary[];
   onClose: () => void;
   onSelectCase: (caseId: string) => void;
   onCreateCase: (data: Partial<InvestigationCase>) => Promise<void>;
@@ -18,12 +19,12 @@ interface CaseSwitcherModalProps {
 export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
   isOpen,
   activeCaseId,
+  summaries,
   onClose,
   onSelectCase,
   onCreateCase,
   onDeleteCase,
 }) => {
-  const [cases, setCases] = useState<InvestigationCase[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
 
@@ -36,47 +37,8 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
   const [leadInvestigator, setLeadInvestigator] = useState('Inspector Dev Sharma');
   const [incidentDate, setIncidentDate] = useState('');
 
-  useEffect(() => {
-    if (isOpen) {
-      getAllCases().then(setCases).catch(() => setCases([]));
-    }
-  }, [isOpen]);
-
-  // Per-case graph cache filled by the async loader below
-  const graphCache = useMemo(() => new Map<string, { entities: any[]; relationships: any[] }>(), []);
-
-  // Prioritization ranking across the whole portfolio (graph data loaded per case)
-  const ranked = useMemo(
-    () =>
-      rankCases(cases, (caseId) => {
-        return graphCache.get(caseId) || { entities: [], relationships: [] };
-      }),
-    [cases, graphCache]
-  );
-
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    (async () => {
-      for (const c of cases) {
-        try {
-          const [entities, relationships] = await Promise.all([
-            getEntitiesByCase(c.id),
-            getRelationshipsByCase(c.id),
-          ]);
-          if (!cancelled) {
-            graphCache.set(c.id, { entities, relationships });
-          }
-        } catch {
-          /* ranking falls back to empty graph for unreadable cases */
-        }
-      }
-      if (!cancelled) setCases((prev) => [...prev]); // trigger re-rank
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, cases.length, graphCache]);
+  // Portfolio ranking computed from Neo4j-side graph summaries
+  const ranked = useMemo(() => rankCaseSummaries(summaries), [summaries]);
 
   if (!isOpen) return null;
 
@@ -112,7 +74,7 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                 Investigation Cases & Prioritization Ranking
               </h2>
               <p className="text-[11px] text-noir-400">
-                Portfolio ranked by risk severity, network density, anomaly load and urgency.
+                Portfolio ranked live from the Neo4j graph by risk severity, network density, anomaly load and urgency.
               </p>
             </div>
           </div>
@@ -195,7 +157,7 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  `Permanently delete case "${c.title}" with ALL its entities, connections, documents and audit records?`
+                                  `Permanently delete case "${c.title}" with ALL its entities, connections, documents and audit records from the Neo4j graph?`
                                 )
                               ) {
                                 onDeleteCase(c.id);
@@ -211,6 +173,15 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                     </div>
 
                     <p className="text-[11px] text-noir-300 mt-2 line-clamp-2">{c.description}</p>
+
+                    {/* Graph summary chips */}
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-noir-500">
+                      <span>{summaries.find((s) => s.caseItem.id === c.id)?.entityCount ?? 0} entities</span>
+                      <span>{summaries.find((s) => s.caseItem.id === c.id)?.relationshipCount ?? 0} links</span>
+                      <span className="text-amber-accent/80">
+                        {summaries.find((s) => s.caseItem.id === c.id)?.anomalyCount ?? 0} open anomalies
+                      </span>
+                    </div>
 
                     {/* Prioritization factor breakdown */}
                     {expandedCaseId === c.id && (

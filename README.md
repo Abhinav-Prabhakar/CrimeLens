@@ -4,9 +4,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.185-white?logo=three.js)](https://threejs.org/)
+[![Neo4j](https://img.shields.io/badge/Graph%20DB-Neo4j-008CC1?logo=neo4j)](https://neo4j.com/)
 [![Groq Cloud](https://img.shields.io/badge/LLM-Groq%20GPT--OSS%20120B%20%2B%20Llama%204%20Scout-orange)](https://groq.com/)
-[![Tests](https://img.shields.io/badge/Vitest-38%20Passed-emerald?logo=vitest)](https://vitest.dev/)
-[![Storage](https://img.shields.io/badge/Offline--First-IndexedDB-purple)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
+[![Tests](https://img.shields.io/badge/Vitest-46%20Passed-emerald?logo=vitest)](https://vitest.dev/)
 
 > **Turn fragmented investigative evidence into an evolving, searchable, and explainable intelligence knowledge graph.**
 
@@ -108,12 +108,13 @@ Rule and graph heuristics detecting — all anchored to the case incident date w
 - Immutable audit log recording every investigator action: case lifecycle, entity and relationship CRUD, identity merges, AI extraction approvals, document ingestion, predicted-link confirmations, report generation, imports/exports, intel triage, and SOS dispatches.
 - Filterable by action type with full timestamps.
 
-### 12. Offline-First IndexedDB Storage & Productivity Rig
-- All cases, dossiers, nodes, relationships, documents, timeline events, tips, safety contacts, and audit logs persist locally in **IndexedDB** (`crimelens_investigation_db`).
+### 12. Neo4j Knowledge Graph Backend & Local Resilience Layer
+- **The knowledge graph lives in Neo4j.** Cases, entities, relationships, ingested documents, and timeline events are persisted as a native property graph — predicates (`CALLED`, `TRANSFERRED_FUNDS`, `OWNS`, …) become real relationship types, so the full evidential network is directly queryable with Cypher (e.g. one-hop money-layering traversals).
+- **Server-side API gateway**: all graph mutations flow through `/api/graph/*` route handlers backed by the Neo4j JavaScript driver — database credentials stay in server environment variables and never reach the client bundle. Uniqueness constraints and lookup indexes are provisioned automatically.
+- **Local resilience**: a write-through IndexedDB cache mirrors the authoritative state so the workspace still boots for inspection when the database is unreachable (writes are explicitly disabled — zero-fallback, never silent divergence). The append-only audit trail, public intel tips, and safety contacts remain local stores.
 - Complete case backup and cross-team sharing via `.crimelens.json` **export and import** — imports are structurally validated (including relationship referential integrity) and re-scoped on identity collision so live cases are never overwritten.
 - **Undo/Redo** (⌘Z / ⌘⇧Z) across graph mutations with database reconciliation.
-- Global search (⌘K) across entities, connections, and ingested documents; ESC closes modals; V/C/L/Space tool shortcuts.
-- Operates seamlessly in air-gapped or low-connectivity tactical environments.
+- Global search (⌘K) across entities, connections, and ingested documents; ESC closes modals; V/C/L/Space tool shortcuts; live Neo4j connection status in the status bar.
 
 ### 13. Public Intelligence & Tip Triage
 - Citizen tips and witness submissions persist in IndexedDB with a **transparent credibility heuristic** (specificity signals like plates/phones/times plus corroboration against existing case entities), shown as an inspectable factor breakdown — a triage aid, never a verdict.
@@ -139,15 +140,16 @@ CrimeLens features an automated test suite across unit, integration, and stress 
 pnpm test
 ```
 
-### Verified Test Results (38 tests):
+### Verified Test Results (46 tests):
 - `tests/unit/graphAlgorithms.test.ts` (5 tests): Shortest path, degree, betweenness centrality, community detection, and link prediction.
 - `tests/unit/identityMatcher.test.ts` (4 tests): Levenshtein distance, abbreviations, phone/plate matching, and conflict flagging.
 - `tests/unit/anomalyDetectors.test.ts` (5 tests): Rapid financial hopping, communication bursts (in/out of the pre-incident window), and geographic anomaly checks with and without an incident anchor.
 - `tests/unit/sanitize.test.ts` (3 tests): Prompt injection neutralization and fallback-free schema parsing.
-- `tests/unit/casePrioritization.test.ts` (4 tests): Scoring order, factor breakdown, density sensitivity, and score bounds.
+- `tests/unit/casePrioritization.test.ts` (7 tests): Scoring order, factor breakdown, density sensitivity, score bounds, array/counts agreement, and portfolio ranking.
 - `tests/unit/timelineDerivation.test.ts` (5 tests): Chronology derivation, event categorization, as-of network state scrubbing, and pre/post phase statistics.
 - `tests/unit/tipCredibility.test.ts` (4 tests): Heuristic bounds, specificity rewards, and entity corroboration.
 - `tests/unit/importBundle.test.ts` (5 tests): Bundle validation, referential integrity rejection, and collision re-scoping.
+- `tests/unit/graphSyncTransform.test.ts` (6 tests): Neo4j node/edge property round-trips, predicate whitelist sanitization (injection-safe), and malformed-JSON degradation.
 - `tests/stress/graphScalability.test.ts` (3 tests): Synthetic graph scalability benchmarks:
   - **100 Nodes**: Computed in < 20ms.
   - **1,000 Nodes**: Full shortest path and community detection in < 150ms.
@@ -164,7 +166,8 @@ pnpm test
 | **Styling** | Tailwind CSS 3.4 (Tactical Noir Dark Mode) |
 | **3D Engine** | Three.js r185, GSAP 3.15, Incremental Scene Diff Sync |
 | **AI / LLM** | Groq Cloud SDK — `openai/gpt-oss-120b` (reasoning), `openai/gpt-oss-20b` (fast), `meta-llama/llama-4-scout-17b-16e-instruct` (forensic vision) |
-| **Offline DB** | IndexedDB via `idb` v8 (8 object stores) + LocalStorage (active case) |
+| **Graph Database** | Neo4j (native property graph) via `neo4j-driver` v6 + Next.js API routes |
+| **Local Layer** | IndexedDB via `idb` v8 (cache, audit, intel, safety) + LocalStorage (active case) |
 | **Testing** | Vitest 3.2, JSDOM, React Testing Library |
 | **Deployment** | Vercel Edge / Serverless Production |
 
@@ -179,19 +182,37 @@ cd CrimeLens
 pnpm install
 ```
 
-### 2. Configure Environment Secrets
+### 2. Provision the Neo4j Graph Database
+CrimeLens is built on Neo4j as its system of record. Any Neo4j 5+ / 2025.x instance works:
+
+**Option A — local (Homebrew):**
+```bash
+brew install neo4j
+/opt/homebrew/opt/neo4j/bin/neo4j-admin dbms set-initial-password <your_password>   # before first start
+/opt/homebrew/opt/neo4j/bin/neo4j start
+```
+
+**Option B — Neo4j AuraDB (hosted free tier):** create an instance at [neo4j.com/cloud/aura](https://neo4j.com/cloud/aura/) and copy its connection URI.
+
+### 3. Configure Environment Secrets
 Create a `.env.local` file in the root directory (this file is gitignored):
 ```bash
 GROQ_API_KEY=your_groq_api_key_here
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=your_neo4j_password
+NEO4J_DATABASE=neo4j
 ```
 
-### 3. Run Development Server
+### 4. Run Development Server
 ```bash
 pnpm dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to access CrimeLens.
+Open [http://localhost:3000](http://localhost:3000) to access CrimeLens. On first boot the demo
+Blackwood Syndicate case is seeded into Neo4j automatically; the status bar shows the live
+`NEO4J GRAPH LINK` connection state.
 
-### 4. Build for Production
+### 5. Build for Production
 ```bash
 pnpm build
 pnpm start
@@ -201,9 +222,9 @@ pnpm start
 
 ## 🔒 Security & Privacy Architecture
 
-1. **Zero Secret Leakage**: The Groq API key is maintained strictly in server-side environment variables and is never exposed in client bundles or git commits.
+1. **Zero Secret Leakage**: The Groq API key and Neo4j credentials are maintained strictly in server-side environment variables and are never exposed in client bundles or git commits — all graph traffic flows through the `/api/graph/*` server routes.
 2. **Prompt Injection Defense**: All ingested documents are treated as untrusted text, wrapped in isolated boundary tags, and scanned for adversarial injection patterns before passing to LLMs.
-3. **Audit Log Trail**: Every investigative action (entity creation, connection approval, identity merge, report export) is stamped with an immutable audit entry in IndexedDB.
+3. **Audit Log Trail**: Every investigative action (entity creation, connection approval, identity merge, report export) is stamped with an immutable, append-only audit entry in the local chain-of-custody store.
 
 ---
 

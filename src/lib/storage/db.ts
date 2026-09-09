@@ -102,14 +102,14 @@ export async function saveEntity(entity: InvestigationEntity): Promise<void> {
 export async function deleteEntity(id: string): Promise<void> {
   const db = await getDB();
   await db.delete('entities', id);
-  // Also delete associated relationships
+  // Cascade via the sourceId/targetId indexes instead of a full store scan
+  const [sourceKeys, targetKeys] = await Promise.all([
+    db.getAllKeysFromIndex('relationships', 'sourceId', id),
+    db.getAllKeysFromIndex('relationships', 'targetId', id),
+  ]);
+  const relKeys = Array.from(new Set([...sourceKeys, ...targetKeys]));
   const tx = db.transaction('relationships', 'readwrite');
-  const rels = await tx.store.getAll();
-  for (const rel of rels) {
-    if (rel.sourceId === id || rel.targetId === id) {
-      await tx.store.delete(rel.id);
-    }
-  }
+  for (const key of relKeys) await tx.store.delete(key);
   await tx.done;
 }
 
@@ -199,7 +199,7 @@ export async function deleteSafetyContact(id: string): Promise<void> {
 
 // ----------------- Case-level deletion -----------------
 
-/** Removes a case and every record scoped to it (entities, rels, docs, logs, timeline). */
+/** Removes a case and every record scoped to it, including its audit trail. */
 export async function purgeCaseData(caseId: string): Promise<void> {
   const db = await getDB();
   const stores = ['entities', 'relationships', 'documents', 'audit_logs', 'timeline_events'] as const;
@@ -210,6 +210,34 @@ export async function purgeCaseData(caseId: string): Promise<void> {
     await tx.done;
   }
   await db.delete('cases', caseId);
+}
+
+/**
+ * Cache maintenance: replace the locally cached graph records of a case with
+ * the authoritative state read from Neo4j. Audit logs are deliberately NOT
+ * touched — the chain of custody is append-only.
+ */
+export async function replaceCaseScope(
+  caseId: string,
+  data: {
+    entities: InvestigationEntity[];
+    relationships: InvestigationRelationship[];
+    documents: IngestedDocument[];
+    timelineEvents: InvestigationTimelineEvent[];
+  }
+): Promise<void> {
+  const db = await getDB();
+  const stores = ['entities', 'relationships', 'documents', 'timeline_events'] as const;
+  for (const store of stores) {
+    const keys = await db.getAllKeysFromIndex(store, 'caseId', caseId);
+    const tx = db.transaction(store, 'readwrite');
+    for (const key of keys) await tx.store.delete(key);
+    await tx.done;
+  }
+  for (const e of data.entities) await db.put('entities', e);
+  for (const r of data.relationships) await db.put('relationships', r);
+  for (const d of data.documents) await db.put('documents', d);
+  for (const ev of data.timelineEvents) await db.put('timeline_events', ev);
 }
 
 /**
