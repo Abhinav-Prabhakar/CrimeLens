@@ -4,8 +4,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?logo=tailwind-css)](https://tailwindcss.com/)
 [![Three.js](https://img.shields.io/badge/Three.js-0.185-white?logo=three.js)](https://threejs.org/)
-[![Groq Cloud](https://img.shields.io/badge/LLM-Groq%20LLaMA%203.3%2070B-orange?logo=fastapi)](https://groq.com/)
-[![Tests](https://img.shields.io/badge/Vitest-18%20Passed-emerald?logo=vitest)](https://vitest.dev/)
+[![Groq Cloud](https://img.shields.io/badge/LLM-Groq%20GPT--OSS%20120B%20%2B%20Llama%204%20Scout-orange)](https://groq.com/)
+[![Tests](https://img.shields.io/badge/Vitest-38%20Passed-emerald?logo=vitest)](https://vitest.dev/)
 [![Storage](https://img.shields.io/badge/Offline--First-IndexedDB-purple)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 
 > **Turn fragmented investigative evidence into an evolving, searchable, and explainable intelligence knowledge graph.**
@@ -41,42 +41,47 @@ CrimeLens strictly adheres to **Responsible AI standards**:
 
 ### 1. The 3D Tactile Corkboard View (`/`)
 Preserves the classic, spatial intuition of the detective murder board:
-- **Verlet Thread Physics Simulation**: Multi-colored cords (Crimson, Twine, Cobalt, Shadow) drape realistically under simulated gravity between evidence pins.
+- **Incremental WebGL Scene Sync**: The Three.js world (scene, camera, textures) is built once per session; entity edits diff-sync into it — drags and edits never rebuild the stage or reset the camera.
+- **Live Catenary Thread Draping**: Multi-colored cords (Crimson, Twine, Cobalt, Shadow) re-drape in real time while you drag a pin, via quadratic Bézier catenary recomputation per frame.
 - **Procedural Evidence Textures**: High-resolution procedural textures for suspect mugshot cards, crime scene polaroids, classified dossiers with red stamps, folded yellow sticky notes, latent fingerprint cards, and forensic evidence bags.
-- **Tactile Camera Rig**: Smooth panning, zoom, orbit tilt damping, and lasso multi-selection.
+- **Tactile Camera Rig & Lasso**: Smooth panning, zoom, rubber-band lasso multi-selection with group drag and group delete.
 
 ### 2. Analytical 2D Knowledge Graph
-High-performance analytical network diagram:
+High-performance force-directed network diagram with DPR-aware rendering, node dragging, wheel zoom, and canvas panning:
 - **Shortest Path Querying**: Computes the most probable link path between any two suspects, displaying intermediate brokers and supporting evidence.
 - **Centrality Heatmaps**: Dynamically sizes nodes by Degree Centrality and identifies critical intermediaries via Betweenness Centrality.
-- **Louvain Community Detection**: Partitions the network into syndicate cells, gangs, and operational clusters.
-- **Topological Link Prediction**: Surfaces covert, unrecorded associations between persons of interest using Jaccard Similarity, Adamic-Adar, and Resource Allocation indices.
+- **Deterministic Community Detection**: Weighted label-propagation modularity clustering partitions the network into syndicate cells with stable, reproducible results across runs.
+- **Topological Link Prediction**: Surfaces covert, unrecorded associations between persons of interest using Jaccard Similarity, Adamic-Adar, and Resource Allocation indices; staged links land as `predicted` edges requiring investigator confirmation.
+- **Shared Filter Pipeline**: The board's evidence-type filters apply to the graph projection too — both views are projections of the same investigation state.
 
 ### 3. Chronological Timeline & Before/After Comparison
-- Interactive temporal scrubber tracking network evolution across key events.
-- **Pre-Incident vs Post-Incident Comparison Mode**: Compares the covert preparation network against the post-breach transit and liquidation network.
-- Category filtering: crime incidents, communications, financial transfers, and forensic recoveries.
+- **Data-Derived Chronology**: Events are derived live from relationship timestamps (`validFrom` / provenance), ingested documents, the case incident anchor, and committed AI extraction events — never hardcoded demo content.
+- **Temporal Network Scrubber**: A slider across the full case chronology showing the network state (active nodes, active edges, dominant hub, density) as of any point in time.
+- **Pre-Incident vs Post-Incident Comparison**: Phase statistics (link counts, key hubs, dominant activity categories) computed from the filtered graph.
 
 ### 4. AI Document Ingestion & Staging Area
 - Ingests unstructured FIRs, interrogation transcripts, CDR dumps, and financial transaction sheets.
 - Server-side parsing via **Groq Cloud** in strict JSON schema mode.
 - **Prompt Injection Hardening**: Sanitizes and defangs adversarial jailbreak instructions hidden inside seized documents.
-- **Human-in-the-Loop Review**: Extracted entities and relationships are staged in an interactive review modal where investigators verify, edit confidence, or reject false leads before graph commit.
+- **Human-in-the-Loop Review**: Extracted entities, relationships, and chronology events are staged in an interactive review modal where investigators verify, edit confidence, or reject false leads before graph commit.
+- **Duplicate-Resistant Commit**: Extracted labels resolve against existing entities via alias and fuzzy (≥ 0.92 similarity) matching; new cards get collision-free board placement, and the source document is persisted with its extraction counts as a chain-of-custody record.
 
 ### 5. Entity Resolution & Identity Disambiguation
 - Discovers duplicate suspects recorded under slight spelling variations or aliases (e.g., *"Rahul Sharma"* vs *"Rahul K. Sharma"*).
 - Multi-signal similarity scoring: Levenshtein string distance, token abbreviations, shared phone numbers, vehicle registrations, and address matching.
 - Highlights conflicting attributes (e.g. incompatible reported ages) and enables one-click merging or alias linking.
+- **Provenance-Preserving Merges**: Merging two identities moves every relationship intact (IDs, predicates, confidence, source provenance) instead of recreating it, unions attributes, and records the merge in the audit trail.
 
 ### 6. Suspicious Pattern & Anomaly Detection
-Rule and graph heuristics detecting:
-- **Rapid Financial Layering**: Structured hopping (Entity A → B → C) through intermediary accounts.
-- **Communication Bursts**: Sudden surges in call frequency immediately preceding an incident.
-- **Geographic Anomalies**: Suspect presence geolocated in the immediate incident sector during the breach window.
+Rule and graph heuristics detecting — all anchored to the case incident date when one is set:
+- **Rapid Financial Layering**: Structured hopping (Entity A → B → C) through intermediary accounts, with leg-timing analysis and mirrored-route deduplication.
+- **Communication Bursts**: Surges in call frequency overlapping the 72-hour pre-incident window; temporally unverifiable bursts are flagged at reduced severity with an explicit caveat rather than silently asserted.
+- **Geographic Anomalies**: Suspect presence geolocated in the immediate incident sector during the ±24h breach window.
 - **Offshore Shell Structures**: Nominee corporate vehicles with overseas registrations.
 
 ### 7. AI Investigator Assistant & Multi-Hypothesis Generator
 - Context-aware intelligence assistant grounded strictly in current case evidence.
+- **Rolling Conversation Memory**: The last 8 exchanges are re-sanitized and sent with each query, so follow-up questions work.
 - **Rich Markdown Chat Interface**: Powered by `react-markdown` and `remark-gfm` supporting tables, bold/italic text, code blocks, and structured lists.
 - **One-Click Quick Action Chips**: Summarize dossier, draft FIR, generate alternative hypotheses, and probe missing links.
 - **Session Transcript Export**: Download full interrogation and reasoning logs as timestamped `.md` files.
@@ -91,23 +96,32 @@ Rule and graph heuristics detecting:
 - Dark crime-noir aesthetic adhering to strict investigative color coding and typography.
 
 ### 9. Case Management & Case Prioritization Ranking
-- Create, manage, and switch between multi-case dossiers.
-- Configurable prioritization ranking based on public risk severity, urgency, solvability, and network entity density.
+- Create, switch, and delete multi-case dossiers without page reloads; the active case persists across sessions via localStorage.
+- **Configurable prioritization engine**: a transparent weighted score (40% declared risk severity + 20% network entity density + 25% open-anomaly load + 15% urgency decay from the incident date) ranks the portfolio, with a per-case factor breakdown available to supervisors.
 
 ### 10. Forensic Image & Object Analysis
-- Visual evidence classification and vehicle license plate recognition with confidence intervals and uncertainty statements.
+- **Real multimodal inference**: uploaded evidence images (CCTV stills, surveillance photos, forensic macro shots) are analyzed by Groq's vision-capable Llama 4 Scout model — zero simulated detections.
+- Classification, description, vehicle make/model estimation, and license plate reading (only when genuinely legible) with confidence intervals and explicit uncertainty statements.
+- Results are staged for investigator review and pinned as `ai_inferred` forensic evidence requiring confirmation.
 
 ### 11. Audit Trail & Chain of Custody
-- Immutable audit log recording every investigator action (case creation, entity edits, relationship confirmation, AI approvals).
+- Immutable audit log recording every investigator action: case lifecycle, entity and relationship CRUD, identity merges, AI extraction approvals, document ingestion, predicted-link confirmations, report generation, imports/exports, intel triage, and SOS dispatches.
+- Filterable by action type with full timestamps.
 
-### 12. Offline-First IndexedDB Storage
-- All cases, dossiers, nodes, relationships, and audit logs persist locally in **IndexedDB** (`crimelens_investigation_db`).
-- Complete case backup and cross-team sharing via `.crimelens.json` export and import.
+### 12. Offline-First IndexedDB Storage & Productivity Rig
+- All cases, dossiers, nodes, relationships, documents, timeline events, tips, safety contacts, and audit logs persist locally in **IndexedDB** (`crimelens_investigation_db`).
+- Complete case backup and cross-team sharing via `.crimelens.json` **export and import** — imports are structurally validated (including relationship referential integrity) and re-scoped on identity collision so live cases are never overwritten.
+- **Undo/Redo** (⌘Z / ⌘⇧Z) across graph mutations with database reconciliation.
+- Global search (⌘K) across entities, connections, and ingested documents; ESC closes modals; V/C/L/Space tool shortcuts.
 - Operates seamlessly in air-gapped or low-connectivity tactical environments.
 
-### 13. Women Safety & Emergency Escalation
-- Trusted well-wisher circle registration.
-- One-touch emergency SOS simulation dispatching geolocated alerts to trusted contacts and the 1091 helpline.
+### 13. Public Intelligence & Tip Triage
+- Citizen tips and witness submissions persist in IndexedDB with a **transparent credibility heuristic** (specificity signals like plates/phones/times plus corroboration against existing case entities), shown as an inspectable factor breakdown — a triage aid, never a verdict.
+- Investigators verify or dismiss tips and promote them into the AI extraction staging pipeline.
+
+### 14. Women Safety & Emergency Escalation
+- Trusted well-wisher circle registration, persisted locally.
+- One-touch emergency SOS simulation dispatching geolocated alerts (via the browser Geolocation API, with an explicit note when unavailable) to trusted contacts and the 1091 helpline, producing a per-channel dispatch receipt and an audit entry in the active case.
 
 ---
 
@@ -125,11 +139,15 @@ CrimeLens features an automated test suite across unit, integration, and stress 
 pnpm test
 ```
 
-### Verified Test Results:
-- `tests/unit/graphAlgorithms.test.ts` (5 tests): Shortest path, degree, betweenness centrality, Louvain communities, and link prediction.
+### Verified Test Results (38 tests):
+- `tests/unit/graphAlgorithms.test.ts` (5 tests): Shortest path, degree, betweenness centrality, community detection, and link prediction.
 - `tests/unit/identityMatcher.test.ts` (4 tests): Levenshtein distance, abbreviations, phone/plate matching, and conflict flagging.
-- `tests/unit/anomalyDetectors.test.ts` (3 tests): Rapid financial hopping, communication burst, and geographic anomaly checks.
+- `tests/unit/anomalyDetectors.test.ts` (5 tests): Rapid financial hopping, communication bursts (in/out of the pre-incident window), and geographic anomaly checks with and without an incident anchor.
 - `tests/unit/sanitize.test.ts` (3 tests): Prompt injection neutralization and fallback-free schema parsing.
+- `tests/unit/casePrioritization.test.ts` (4 tests): Scoring order, factor breakdown, density sensitivity, and score bounds.
+- `tests/unit/timelineDerivation.test.ts` (5 tests): Chronology derivation, event categorization, as-of network state scrubbing, and pre/post phase statistics.
+- `tests/unit/tipCredibility.test.ts` (4 tests): Heuristic bounds, specificity rewards, and entity corroboration.
+- `tests/unit/importBundle.test.ts` (5 tests): Bundle validation, referential integrity rejection, and collision re-scoping.
 - `tests/stress/graphScalability.test.ts` (3 tests): Synthetic graph scalability benchmarks:
   - **100 Nodes**: Computed in < 20ms.
   - **1,000 Nodes**: Full shortest path and community detection in < 150ms.
@@ -144,9 +162,9 @@ pnpm test
 | **Framework** | Next.js 16 (App Router, Turbopack, React 19) |
 | **Language** | TypeScript 5.9 (Strict Type Checking) |
 | **Styling** | Tailwind CSS 3.4 (Tactical Noir Dark Mode) |
-| **3D Engine** | Three.js r185, GSAP 3.15, Custom Verlet Rope Physics |
-| **AI / LLM** | Groq Cloud SDK (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`) |
-| **Offline DB** | IndexedDB via `idb` v8 + LocalStorage |
+| **3D Engine** | Three.js r185, GSAP 3.15, Incremental Scene Diff Sync |
+| **AI / LLM** | Groq Cloud SDK — `openai/gpt-oss-120b` (reasoning), `openai/gpt-oss-20b` (fast), `meta-llama/llama-4-scout-17b-16e-instruct` (forensic vision) |
+| **Offline DB** | IndexedDB via `idb` v8 (8 object stores) + LocalStorage (active case) |
 | **Testing** | Vitest 3.2, JSDOM, React Testing Library |
 | **Deployment** | Vercel Edge / Serverless Production |
 

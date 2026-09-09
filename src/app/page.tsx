@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { AlertTriangle, X } from 'lucide-react';
 import { useInvestigationStore } from '@/lib/store/useInvestigationStore';
 import { CorkboardToolbar } from '@/components/board/CorkboardToolbar';
 import { InspectorDrawer } from '@/components/board/InspectorDrawer';
@@ -34,28 +35,46 @@ export default function CrimeLensMainPage() {
     activeCase,
     entities,
     relationships,
+    documents,
+    timelineEvents,
     selectedEntityId,
+    selectedEntityIds,
     activeTool,
     threadColor,
     activeView,
     loading,
+    dbError,
     filterTypes,
+    canUndo,
+    canRedo,
     setActiveView,
     setActiveTool,
     setThreadColor,
     setSelectedEntityId,
+    setSelectedEntityIds,
     setFilterTypes,
+    switchCase,
+    createCase,
+    deleteCase,
     addEntity,
     updateEntity,
     deleteEntity,
     addRelationship,
-    resetToSeed,
+    deleteRelationship,
+    confirmRelationship,
+    mergeEntities,
     commitExtraction,
+    undo,
+    redo,
+    importBundle,
+    resetToSeed,
+    logCaseEvent,
     exportData,
   } = useInvestigationStore();
 
   // Modal Open States
   const [isIngestOpen, setIsIngestOpen] = useState(false);
+  const [ingestPrefill, setIngestPrefill] = useState<string | undefined>(undefined);
   const [isResolutionOpen, setIsResolutionOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
@@ -66,17 +85,52 @@ export default function CrimeLensMainPage() {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isAuditLogsOpen, setIsAuditLogsOpen] = useState(false);
 
-  // Global Keyboard Shortcuts (Cmd+K / Ctrl+K, V, C)
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  // Global Keyboard Shortcuts (Cmd+K search, V/C/L tools, Space pan, Cmd+Z undo, ESC close)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.isContentEditable;
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
+        return;
       }
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (e.key === 'Escape') {
+        // Close the topmost open modal (fixed priority order)
+        const modalStack: [boolean, () => void][] = [
+          [isSearchOpen, () => setIsSearchOpen(false)],
+          [isCasesOpen, () => setIsCasesOpen(false)],
+          [isAuditLogsOpen, () => setIsAuditLogsOpen(false)],
+          [isImageModalOpen, () => setIsImageModalOpen(false)],
+          [isIngestOpen, () => setIsIngestOpen(false)],
+          [isResolutionOpen, () => setIsResolutionOpen(false)],
+          [isIntelOpen, () => setIsIntelOpen(false)],
+          [isSafetyOpen, () => setIsSafetyOpen(false)],
+          [isReportsOpen, () => setIsReportsOpen(false)],
+          [isAssistantOpen, () => setIsAssistantOpen(false)],
+        ];
+        for (let i = modalStack.length - 1; i >= 0; i--) {
+          if (modalStack[i][0]) {
+            modalStack[i][1]();
+            return;
+          }
+        }
+        setSelectedEntityId(null);
+        return;
+      }
+      if (typing) return;
 
       if (e.key === 'v' || e.key === 'V') setActiveTool('select');
       if (e.key === 'c' || e.key === 'C') setActiveTool('connect');
+      if (e.key === 'l' || e.key === 'L') setActiveTool('lasso');
       if (e.key === ' ') {
         e.preventDefault();
         setActiveTool('pan');
@@ -85,7 +139,7 @@ export default function CrimeLensMainPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTool]);
+  }, [setActiveTool, undo, redo, isSearchOpen, isCasesOpen, isAuditLogsOpen, isImageModalOpen, isIngestOpen, isResolutionOpen, isIntelOpen, isSafetyOpen, isReportsOpen, isAssistantOpen, setSelectedEntityId]);
 
   // Selected Entity
   const selectedEntity = entities.find((e) => e.id === selectedEntityId) || null;
@@ -106,61 +160,84 @@ export default function CrimeLensMainPage() {
     });
   };
 
+  // Lasso multi-select from board
+  const handleLassoSelect = (ids: string[]) => {
+    setSelectedEntityIds(ids);
+    if (ids.length === 1) setSelectedEntityId(ids[0]);
+  };
+
   // Add Quick Pin/Card
   const handleAddQuickCard = (type: string) => {
     addEntity({
       label: `New ${type.toUpperCase()}`,
       visualType: type as any,
       type: type === 'suspect' ? 'person' : type === 'doc' ? 'document' : 'evidence_item',
-      boardPosition: {
-        x: (Math.random() - 0.5) * 30,
-        y: (Math.random() - 0.5) * 20,
-      },
     });
   };
 
-  // Merge from Entity Resolution
-  const handleMergeEntities = (keptId: string, mergedId: string) => {
-    const merged = entities.find((e) => e.id === mergedId);
-    if (!merged) return;
-
-    // Add merged label to kept entity aliases
-    const kept = entities.find((e) => e.id === keptId);
-    if (kept) {
-      updateEntity(keptId, {
-        aliases: Array.from(new Set([...kept.aliases, merged.label, ...merged.aliases])),
-        notes: `${kept.notes || ''}\n[MERGED IDENTITY]: Combined records with ${merged.label}`.trim(),
-      });
-    }
-
-    // Redirect relationships from merged to kept
-    relationships.forEach((rel) => {
-      if (rel.sourceId === mergedId) {
-        addRelationship({ ...rel, sourceId: keptId });
-      }
-      if (rel.targetId === mergedId) {
-        addRelationship({ ...rel, targetId: keptId });
-      }
-    });
-
-    deleteEntity(mergedId);
-  };
-
-  // Export Case Bundle
+  // Export Case Bundle (documented .crimelens.json extension)
   const handleExport = async () => {
     const data = await exportData();
-    if (!data) return;
+    if (!data || !activeCase) return;
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeCase?.caseNumber || 'case'}_crimelens_bundle.json`;
+    a.download = `${activeCase.caseNumber || 'case'}.crimelens.json`;
     a.click();
     URL.revokeObjectURL(url);
+    logCaseEvent(
+      'bundle_exported',
+      'case',
+      activeCase.id,
+      `Exported case bundle (${entities.length} entities, ${relationships.length} relationships, ${documents.length} documents)`
+    );
+  };
+
+  // Import Case Bundle
+  const handleImportFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const result = await importBundle(parsed);
+      if (result.ok) {
+        window.alert(`✓ ${result.message}`);
+      } else {
+        window.alert(`Import failed: ${result.message}`);
+      }
+    } catch (err: any) {
+      window.alert(`Import failed: file is not valid JSON (${err?.message || 'parse error'})`);
+    }
+  };
+
+  // Reset seed with explicit confirmation
+  const handleResetSeed = () => {
+    if (
+      window.confirm(
+        'Restore the demo Blackwood Syndicate case data?\n\nThis re-seeds the demo case and switches to it. Other cases are not affected.'
+      )
+    ) {
+      resetToSeed();
+    }
   };
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-noir-950">
+      {/* Storage health banner */}
+      {dbError && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 max-w-2xl px-3 py-2 bg-crimson/15 border border-crimson/50 rounded-lg font-mono text-[11px] text-crimson flex items-center gap-2 backdrop-blur-md">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span className="flex-1">Storage: {dbError}</span>
+        </div>
+      )}
+
+      {/* Boot overlay */}
+      {loading && (
+        <div className="absolute inset-0 z-50 bg-noir-950/90 flex items-center justify-center font-mono text-noir-400 text-xs">
+          <span className="animate-pulse">LOADING INVESTIGATION DATABASE...</span>
+        </div>
+      )}
+
       {/* Top Toolbar, View Switcher & Left Tool Rail */}
       <CorkboardToolbar
         activeCase={activeCase}
@@ -168,11 +245,16 @@ export default function CrimeLensMainPage() {
         activeTool={activeTool}
         threadColor={threadColor}
         filterTypes={filterTypes}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onSelectView={setActiveView}
         onSelectTool={setActiveTool}
         onSelectThreadColor={setThreadColor}
         onToggleFilter={(t) => setFilterTypes((prev) => ({ ...prev, [t]: !prev[t] }))}
-        onOpenIngest={() => setIsIngestOpen(true)}
+        onOpenIngest={() => {
+          setIngestPrefill(undefined);
+          setIsIngestOpen(true);
+        }}
         onOpenResolution={() => setIsResolutionOpen(true)}
         onOpenAssistant={() => setIsAssistantOpen(true)}
         onOpenReports={() => setIsReportsOpen(true)}
@@ -182,9 +264,23 @@ export default function CrimeLensMainPage() {
         onOpenCases={() => setIsCasesOpen(true)}
         onOpenImageAnalysis={() => setIsImageModalOpen(true)}
         onOpenAuditLogs={() => setIsAuditLogsOpen(true)}
-        onResetSeed={resetToSeed}
+        onResetSeed={handleResetSeed}
         onExport={handleExport}
+        onImport={() => importFileRef.current?.click()}
+        onUndo={undo}
+        onRedo={redo}
         onAddQuickCard={handleAddQuickCard}
+      />
+
+      <input
+        ref={importFileRef}
+        type="file"
+        accept=".json,.crimelens.json,application/json"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.[0]) handleImportFile(e.target.files[0]);
+          e.target.value = '';
+        }}
       />
 
       {/* Main View Area */}
@@ -194,12 +290,14 @@ export default function CrimeLensMainPage() {
             entities={entities}
             relationships={relationships}
             selectedEntityId={selectedEntityId}
+            selectedEntityIds={selectedEntityIds}
             activeTool={activeTool}
             threadColor={threadColor}
             filterTypes={filterTypes}
             onSelectEntity={setSelectedEntityId}
             onUpdatePosition={handleUpdatePosition}
             onConnect={handleConnect}
+            onLassoSelect={handleLassoSelect}
           />
         )}
 
@@ -208,6 +306,7 @@ export default function CrimeLensMainPage() {
             entities={entities}
             relationships={relationships}
             selectedEntityId={selectedEntityId}
+            filterTypes={filterTypes}
             onSelectEntity={setSelectedEntityId}
             onAddPredictedLink={(pl) => {
               addRelationship({
@@ -218,7 +317,15 @@ export default function CrimeLensMainPage() {
                 confidence: pl.score,
                 threadColor: 'twine',
                 status: 'predicted',
+                manuallyConfirmed: false,
                 notes: `Topological Link Prediction: ${pl.reasons.join('; ')}`,
+              }).then(() => {
+                logCaseEvent(
+                  'link_prediction_confirmed',
+                  'relationship',
+                  `${pl.sourceId}->${pl.targetId}`,
+                  `Investigator staged predicted link ${pl.sourceLabel} — ${pl.targetLabel} (${(pl.score * 100).toFixed(0)}%); confirm in Inspector`
+                );
               });
             }}
           />
@@ -229,6 +336,8 @@ export default function CrimeLensMainPage() {
             activeCase={activeCase}
             entities={entities}
             relationships={relationships}
+            documents={documents}
+            timelineEvents={timelineEvents}
             onSelectEntity={(id) => {
               setSelectedEntityId(id);
               setActiveView('board');
@@ -238,6 +347,7 @@ export default function CrimeLensMainPage() {
 
         {activeView === 'patterns' && (
           <AnomalyPanel
+            activeCase={activeCase}
             entities={entities}
             relationships={relationships}
             onSelectEntity={(id) => {
@@ -248,15 +358,41 @@ export default function CrimeLensMainPage() {
         )}
       </div>
 
-      {/* Inspector Drawer (When Entity is Selected) */}
+      {/* Multi-selection floating actions */}
+      {selectedEntityIds.length > 1 && activeView === 'board' && (
+        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-30 px-3 py-2 bg-noir-900/95 border border-noir-700 rounded-lg font-mono text-[11px] flex items-center gap-3 shadow-xl backdrop-blur-md">
+          <span className="text-amber-accent font-bold">{selectedEntityIds.length} SELECTED</span>
+          <button
+            onClick={() => {
+              selectedEntityIds.forEach((id) => deleteEntity(id));
+              setSelectedEntityIds([]);
+            }}
+            className="px-2 py-1 bg-crimson/15 hover:bg-crimson/25 text-crimson border border-crimson/40 rounded font-bold"
+          >
+            Delete All
+          </button>
+          <button
+            onClick={() => setSelectedEntityIds([])}
+            className="p-1 text-noir-400 hover:text-noir-100"
+            title="Clear selection"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Inspector Drawer (When Entity is Selected) — remounts per entity so state can never go stale */}
       {selectedEntity && (
         <InspectorDrawer
+          key={selectedEntity.id}
           entity={selectedEntity}
           relationships={relationships}
           allEntities={entities}
           onClose={() => setSelectedEntityId(null)}
           onUpdate={updateEntity}
           onDelete={deleteEntity}
+          onConfirmRelationship={confirmRelationship}
+          onDeleteRelationship={deleteRelationship}
         />
       )}
 
@@ -264,6 +400,8 @@ export default function CrimeLensMainPage() {
       <GlobalSearchModal
         isOpen={isSearchOpen}
         entities={entities}
+        relationships={relationships}
+        documents={documents}
         onClose={() => setIsSearchOpen(false)}
         onSelectEntity={(id) => {
           setSelectedEntityId(id);
@@ -275,14 +413,19 @@ export default function CrimeLensMainPage() {
         isOpen={isCasesOpen}
         activeCaseId={activeCase?.id || null}
         onClose={() => setIsCasesOpen(false)}
-        onSelectCase={(newCase) => {
-          window.location.reload();
+        onSelectCase={(caseId) => switchCase(caseId)}
+        onCreateCase={async (data) => {
+          await createCase(data);
+        }}
+        onDeleteCase={async (caseId) => {
+          await deleteCase(caseId);
         }}
       />
 
       {/* Forensic Image & Object Analysis Modal */}
       <ImageAnalysisModal
         isOpen={isImageModalOpen}
+        caseContextNote={activeCase ? `${activeCase.title} (${activeCase.caseNumber})` : undefined}
         onClose={() => setIsImageModalOpen(false)}
         onAddEvidence={(evData) => {
           addEntity({
@@ -291,10 +434,14 @@ export default function CrimeLensMainPage() {
             visualType: evData.visualType,
             confidence: evData.confidence,
             notes: evData.notes,
-            boardPosition: {
-              x: (Math.random() - 0.5) * 20,
-              y: (Math.random() - 0.5) * 20,
+            status: 'ai_inferred',
+            provenance: {
+              sourceId: 'vision_analysis',
+              sourceType: 'forensic',
+              sourceTitle: 'Forensic Vision Analysis (Groq multimodal)',
+              confidence: evData.confidence,
             },
+            tags: ['vision_analyzed'],
           });
         }}
       />
@@ -310,9 +457,13 @@ export default function CrimeLensMainPage() {
       <DocumentIngestModal
         caseId={activeCase?.id || 'case_default'}
         isOpen={isIngestOpen}
-        onClose={() => setIsIngestOpen(false)}
-        onCommit={(newEnts, newRels, docTitle) => {
-          commitExtraction(newEnts, newRels, docTitle);
+        prefillText={ingestPrefill}
+        onClose={() => {
+          setIsIngestOpen(false);
+          setIngestPrefill(undefined);
+        }}
+        onCommit={(newEnts, newRels, newEvents, docMeta) => {
+          commitExtraction(newEnts, newRels, newEvents, docMeta);
         }}
       />
 
@@ -321,7 +472,7 @@ export default function CrimeLensMainPage() {
         isOpen={isResolutionOpen}
         entities={entities}
         onClose={() => setIsResolutionOpen(false)}
-        onMerge={handleMergeEntities}
+        onMerge={mergeEntities}
       />
 
       {/* AI Investigator Assistant Drawer */}
@@ -340,16 +491,29 @@ export default function CrimeLensMainPage() {
         entities={entities}
         relationships={relationships}
         onClose={() => setIsReportsOpen(false)}
+        onReportGenerated={(reportType) => {
+          logCaseEvent('report_generated', 'case', activeCase?.id || 'case', `Generated ${reportType} report for ${activeCase?.caseNumber}`);
+        }}
       />
 
       {/* Women Safety Modal */}
-      <WomenSafetyModal isOpen={isSafetyOpen} onClose={() => setIsSafetyOpen(false)} />
+      <WomenSafetyModal
+        isOpen={isSafetyOpen}
+        onClose={() => setIsSafetyOpen(false)}
+        onSosDispatched={(details) => {
+          logCaseEvent('sos_dispatched', 'case', activeCase?.id || 'case', details);
+        }}
+      />
 
       {/* Public Intelligence Intake Modal */}
       <PublicIntelModal
         isOpen={isIntelOpen}
+        caseEntities={entities}
         onClose={() => setIsIntelOpen(false)}
+        onTriage={(action, details) => logCaseEvent(action, 'intel', 'tip', details)}
         onPromoteToCase={(tipText) => {
+          logCaseEvent('intel_promoted', 'intel', 'tip', 'Tip promoted to AI extraction staging');
+          setIngestPrefill(tipText);
           setIsIngestOpen(true);
         }}
       />

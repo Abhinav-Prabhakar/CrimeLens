@@ -6,10 +6,12 @@ import {
   IngestedDocument,
   AuditLogEntry,
   PublicIntelSubmission,
+  InvestigationTimelineEvent,
+  SafetyContact,
 } from '../types/investigation';
 
 const DB_NAME = 'crimelens_investigation_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -54,6 +56,15 @@ export function getDB(): Promise<IDBPDatabase> {
         if (!db.objectStoreNames.contains('intel_submissions')) {
           const intelStore = db.createObjectStore('intel_submissions', { keyPath: 'id' });
           intelStore.createIndex('submittedAt', 'submittedAt', { unique: false });
+        }
+        // Timeline Events (v2): committed AI extractions + manual pins + derived chronology sources
+        if (!db.objectStoreNames.contains('timeline_events')) {
+          const tlStore = db.createObjectStore('timeline_events', { keyPath: 'id' });
+          tlStore.createIndex('caseId', 'caseId', { unique: false });
+        }
+        // Women Safety trusted contacts (v2): user-scoped, not case-scoped
+        if (!db.objectStoreNames.contains('safety_contacts')) {
+          db.createObjectStore('safety_contacts', { keyPath: 'id' });
         }
       },
     });
@@ -147,6 +158,60 @@ export async function saveIntelSubmission(sub: PublicIntelSubmission): Promise<v
   await db.put('intel_submissions', sub);
 }
 
+export async function deleteIntelSubmission(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('intel_submissions', id);
+}
+
+// ----------------- Timeline Events -----------------
+
+export async function getTimelineEventsByCase(caseId: string): Promise<InvestigationTimelineEvent[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('timeline_events', 'caseId', caseId);
+}
+
+export async function saveTimelineEvent(ev: InvestigationTimelineEvent): Promise<void> {
+  const db = await getDB();
+  await db.put('timeline_events', ev);
+}
+
+export async function deleteTimelineEvent(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('timeline_events', id);
+}
+
+// ----------------- Safety Contacts -----------------
+
+export async function getAllSafetyContacts(): Promise<SafetyContact[]> {
+  const db = await getDB();
+  return db.getAll('safety_contacts');
+}
+
+export async function saveSafetyContact(contact: SafetyContact): Promise<void> {
+  const db = await getDB();
+  await db.put('safety_contacts', contact);
+}
+
+export async function deleteSafetyContact(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('safety_contacts', id);
+}
+
+// ----------------- Case-level deletion -----------------
+
+/** Removes a case and every record scoped to it (entities, rels, docs, logs, timeline). */
+export async function purgeCaseData(caseId: string): Promise<void> {
+  const db = await getDB();
+  const stores = ['entities', 'relationships', 'documents', 'audit_logs', 'timeline_events'] as const;
+  for (const store of stores) {
+    const keys = await db.getAllKeysFromIndex(store, 'caseId', caseId);
+    const tx = db.transaction(store, 'readwrite');
+    for (const key of keys) await tx.store.delete(key);
+    await tx.done;
+  }
+  await db.delete('cases', caseId);
+}
+
 /**
  * Export full case bundle to JSON
  */
@@ -157,9 +222,13 @@ export async function exportCaseData(caseId: string) {
   const relationships = await db.getAllFromIndex('relationships', 'caseId', caseId);
   const documents = await db.getAllFromIndex('documents', 'caseId', caseId);
   const auditLogs = await db.getAllFromIndex('audit_logs', 'caseId', caseId);
+  const timelineEvents = await db.getAllFromIndex('timeline_events', 'caseId', caseId);
+  const intelSubmissions = (await db.getAll('intel_submissions')).filter(
+    (s) => s.caseId === caseId
+  );
 
   return {
-    version: '1.0.0',
+    version: '1.1.0',
     system: 'CrimeLens',
     exportedAt: new Date().toISOString(),
     caseItem,
@@ -167,5 +236,7 @@ export async function exportCaseData(caseId: string) {
     relationships,
     documents,
     auditLogs,
+    timelineEvents,
+    intelSubmissions,
   };
 }

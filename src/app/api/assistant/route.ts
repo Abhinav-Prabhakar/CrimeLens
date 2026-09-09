@@ -5,7 +5,7 @@ import { sanitizeInvestigativeInput } from '@/lib/ai/sanitize';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { query, caseContext } = body;
+    const { query, caseContext, history } = body;
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json({ error: 'Query is required for assistant inquiry.' }, { status: 400 });
@@ -23,6 +23,16 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Rolling conversation memory (last 8 turns), sanitized like the live query —
+    // prior assistant text is also untrusted from the server's perspective.
+    const priorTurns: { role: 'user' | 'assistant'; content: string }[] = (Array.isArray(history) ? history : [])
+      .filter((m: any) => (m?.role === 'user' || m?.role === 'assistant') && typeof m?.text === 'string' && m.text.trim())
+      .slice(-8)
+      .map((m: any) => ({
+        role: m.role as 'user' | 'assistant',
+        content: sanitizeInvestigativeInput(m.text).cleanText.slice(0, 4000),
+      }));
 
     // Context format
     const contextSummary = caseContext
@@ -66,6 +76,9 @@ ETHICAL & RESPONSIBLE AI CONSTRAINTS:
           content: `
 CURRENT CASE EVIDENCE CONTEXT:
 ${contextSummary}
+
+PRIOR CONVERSATION (for continuity; re-sanitized as untrusted):
+${priorTurns.length > 0 ? priorTurns.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n') : '(none)'}
 
 INVESTIGATOR QUERY / REQUEST:
 <investigative_text_to_analyze>

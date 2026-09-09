@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Upload, Sparkles, Check, AlertCircle, FileText, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, Sparkles, Check, AlertCircle, FileText, ArrowRight, Clock } from 'lucide-react';
 import { ExtractionResult } from '@/lib/ai/extractionPrompt';
 
 interface DocumentIngestModalProps {
   caseId: string;
   isOpen: boolean;
+  prefillText?: string;
   onClose: () => void;
-  onCommit: (entities: any[], relationships: any[], docTitle: string) => void;
+  onCommit: (
+    entities: any[],
+    relationships: any[],
+    timelineEvents: any[],
+    docMeta: { title: string; documentType: string; rawText: string; summary?: string }
+  ) => void;
 }
 
 const SAMPLE_REPORTS = [
@@ -45,6 +51,7 @@ Funds disbursed within 4 hours across three overseas accounts.
 export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
   caseId,
   isOpen,
+  prefillText,
   onClose,
   onCommit,
 }) => {
@@ -55,8 +62,31 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
   const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
   const [stagingEntities, setStagingEntities] = useState<any[]>([]);
   const [stagingRelationships, setStagingRelationships] = useState<any[]>([]);
+  const [stagingEvents, setStagingEvents] = useState<any[]>([]);
   const [sourceUsed, setSourceUsed] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
+
+  // Prefill from promoted public intel tips
+  useEffect(() => {
+    if (isOpen && prefillText) {
+      setContent(prefillText);
+      setTitle('Public Intel Tip — AI Extraction');
+      setDocType('public_intel');
+      setExtractionResult(null);
+    }
+  }, [isOpen, prefillText]);
+
+  // Reset staging state whenever the modal closes, so reopening starts clean
+  useEffect(() => {
+    if (!isOpen) {
+      setExtractionResult(null);
+      setStagingEntities([]);
+      setStagingRelationships([]);
+      setStagingEvents([]);
+      setErrorMsg('');
+      setIsExtracting(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -92,6 +122,7 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
       setExtractionResult(json.data);
       setStagingEntities(json.data.entities.map((e: any) => ({ ...e, checked: true })));
       setStagingRelationships(json.data.relationships.map((r: any) => ({ ...r, checked: true })));
+      setStagingEvents((json.data.timelineEvents || []).map((ev: any) => ({ ...ev, checked: true })));
     } catch (err: any) {
       console.error('Extraction error:', err);
       setErrorMsg(err.message || 'Extraction pipeline error. Please check your network or input.');
@@ -103,7 +134,13 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
   const handleCommit = () => {
     const confirmedEntities = stagingEntities.filter((e) => e.checked);
     const confirmedRelationships = stagingRelationships.filter((r) => r.checked);
-    onCommit(confirmedEntities, confirmedRelationships, title);
+    const confirmedEvents = stagingEvents.filter((ev) => ev.checked);
+    onCommit(confirmedEntities, confirmedRelationships, confirmedEvents, {
+      title,
+      documentType: docType,
+      rawText: content,
+      summary: extractionResult?.investigativeSummary,
+    });
     onClose();
   };
 
@@ -169,6 +206,7 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
                     <option value="cdr">Call Detail Record (CDR)</option>
                     <option value="financial">Financial Transaction Sheet</option>
                     <option value="surveillance">Surveillance / Intelligence Dossier</option>
+                    <option value="public_intel">Public Intel / Anonymous Tip</option>
                   </select>
                 </div>
               </div>
@@ -273,6 +311,49 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Proposed Timeline Events */}
+              {stagingEvents.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="font-bold text-noir-100 uppercase flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-accent" />
+                    Proposed Chronology Events ({stagingEvents.length})
+                  </h3>
+                  <div className="max-h-36 overflow-y-auto border border-noir-700 rounded-lg divide-y divide-noir-800">
+                    {stagingEvents.map((ev, idx) => (
+                      <div key={idx} className="p-2 bg-noir-950/60 flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={ev.checked}
+                            onChange={(e) => {
+                              const copy = [...stagingEvents];
+                              copy[idx].checked = e.target.checked;
+                              setStagingEvents(copy);
+                            }}
+                            className="accent-crimson rounded mt-0.5"
+                          />
+                          <div>
+                            <div className="text-noir-200">{ev.description}</div>
+                            {ev.entitiesInvolved?.length > 0 && (
+                              <div className="text-[10px] text-noir-500">Actors: {ev.entitiesInvolved.join(', ')}</div>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-amber-accent font-mono whitespace-nowrap">
+                          {ev.timestamp && !Number.isNaN(new Date(ev.timestamp).getTime())
+                            ? new Date(ev.timestamp).toLocaleString()
+                            : 'undated'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-noir-500 italic">
+                    Committed events join the case chronology and power the temporal scrubber. Undated events are
+                    anchored to ingestion time and explicitly flagged.
+                  </p>
                 </div>
               )}
             </div>

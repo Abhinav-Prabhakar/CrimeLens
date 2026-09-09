@@ -10,6 +10,7 @@ interface CaseReportModalProps {
   entities: InvestigationEntity[];
   relationships: InvestigationRelationship[];
   onClose: () => void;
+  onReportGenerated?: (reportType: string) => void;
 }
 
 export const CaseReportModal: React.FC<CaseReportModalProps> = ({
@@ -18,6 +19,7 @@ export const CaseReportModal: React.FC<CaseReportModalProps> = ({
   entities,
   relationships,
   onClose,
+  onReportGenerated,
 }) => {
   const [reportType, setReportType] = useState<'dossier' | 'fir' | 'network'>('dossier');
   const [copied, setCopied] = useState(false);
@@ -159,6 +161,7 @@ ${relationships
     a.download = `${activeCase.caseNumber}_${reportType}_report.md`;
     a.click();
     URL.revokeObjectURL(url);
+    onReportGenerated?.(reportType);
   };
 
   return (

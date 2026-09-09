@@ -1,123 +1,99 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Clock, Calendar, ShieldAlert, ArrowRight, Filter, Split, CheckCircle2 } from 'lucide-react';
-import { InvestigationEntity, InvestigationRelationship, InvestigationCase } from '@/lib/types/investigation';
+import { Clock, Calendar, Filter, Activity } from 'lucide-react';
+import {
+  InvestigationCase,
+  InvestigationEntity,
+  InvestigationRelationship,
+  IngestedDocument,
+  InvestigationTimelineEvent,
+} from '@/lib/types/investigation';
+import { buildTimeline, networkStateAtTime, beforeAfterStats } from '@/lib/temporal/timeline';
 
 interface TimelineViewProps {
   activeCase: InvestigationCase | null;
   entities: InvestigationEntity[];
   relationships: InvestigationRelationship[];
+  documents: IngestedDocument[];
+  timelineEvents: InvestigationTimelineEvent[];
   onSelectEntity: (id: string) => void;
 }
 
-interface TimelineEvent {
-  id: string;
-  timestamp: string;
-  title: string;
-  category: 'incident' | 'communication' | 'financial' | 'forensic' | 'surveillance';
-  description: string;
-  isPostIncident: boolean;
-  involvedEntityIds: string[];
-}
+const CATEGORY_STYLES: Record<string, string> = {
+  incident: 'bg-crimson text-white',
+  communication: 'bg-amber-accent/20 text-amber-accent border border-amber-accent/40',
+  financial: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
+  forensic: 'bg-cobalt/20 text-cobalt border border-cobalt/40',
+  surveillance: 'bg-noir-800 text-noir-300',
+  document: 'bg-noir-800 text-noir-400 border border-noir-700',
+};
 
 export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
   activeCase,
   entities,
   relationships,
+  documents,
+  timelineEvents,
   onSelectEntity,
 }) => {
-  const incidentDate = activeCase?.incidentDate || '2026-09-01T21:30:00Z';
-  const incidentTime = new Date(incidentDate).getTime();
+  const incidentDate = activeCase?.incidentDate;
 
-  // Mode: 'all' | 'before' | 'after'
   const [temporalFilter, setTemporalFilter] = useState<'all' | 'before' | 'after'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [scrubRatio, setScrubRatio] = useState<number>(1); // 0..1 across the chronology
 
-  // Synthesize rich chronological events from relationships and entities
-  const events: TimelineEvent[] = useMemo(() => {
-    const list: TimelineEvent[] = [
-      {
-        id: 'ev_pre_meeting',
-        timestamp: '2026-08-28T16:00:00Z',
-        title: 'Julian Marlowe & Elena Rostova Meeting',
-        category: 'surveillance',
-        description: 'Subjects observed together at Royal Yacht Club. Initial consultation on offshore escrow setup.',
-        isPostIncident: false,
-        involvedEntityIds: ['ent_marlowe', 'ent_elena'],
-      },
-      {
-        id: 'ev_burner_act',
-        timestamp: '2026-08-30T10:00:00Z',
-        title: 'Burner SIM Line Activated',
-        category: 'communication',
-        description: 'Target prepaid line (+91 98112-44120) powered on in South Bombay sector.',
-        isPostIncident: false,
-        involvedEntityIds: ['ent_burner', 'ent_vance'],
-      },
-      {
-        id: 'ev_burst_calls',
-        timestamp: '2026-09-01T19:45:00Z',
-        title: 'Pre-Breach Communication Burst',
-        category: 'communication',
-        description: '14 rapid encrypted calls recorded between Marlowe, Vance, and Burner SIM.',
-        isPostIncident: false,
-        involvedEntityIds: ['ent_marlowe', 'ent_vance', 'ent_burner'],
-      },
-      {
-        id: 'ev_incident_breach',
-        timestamp: '2026-09-01T21:30:00Z',
-        title: 'CRIME OCCURRENCE: Pier 9 Warehouse Breach',
-        category: 'incident',
-        description: 'Security gate breached via thermal lance. High-value antiquities extracted from vault.',
-        isPostIncident: false,
-        involvedEntityIds: ['ent_scene', 'ent_vance', 'ent_bag'],
-      },
-      {
-        id: 'ev_getaway',
-        timestamp: '2026-09-01T21:42:00Z',
-        title: 'Red Sedan Fled Scene',
-        category: 'surveillance',
-        description: 'Vehicle MH-01-BX-4912 captured on southern expressway toll camera fleeing with headlights extinguished.',
-        isPostIncident: true,
-        involvedEntityIds: ['ent_vehicle', 'ent_vance'],
-      },
-      {
-        id: 'ev_forensic_recovery',
-        timestamp: '2026-09-02T06:15:00Z',
-        title: 'Crime Scene Forensics & Fingerprint Recovery',
-        category: 'forensic',
-        description: 'Titanium lockpick set and latent fingerprint LP-4 recovered near breached padlock.',
-        isPostIncident: true,
-        involvedEntityIds: ['ent_scene', 'ent_print', 'ent_bag'],
-      },
-      {
-        id: 'ev_wire_transfer',
-        timestamp: '2026-09-03T11:20:00Z',
-        title: 'Wire Transfer of $450,000 Dispatched',
-        category: 'financial',
-        description: 'Apex Maritime Holdings Ltd wired $450,000 USD into Elena Rostova escrow retainer.',
-        isPostIncident: true,
-        involvedEntityIds: ['ent_shell_co', 'ent_transaction', 'ent_elena'],
-      },
-    ];
+  // The real chronology, derived from case records — never hardcoded demo content.
+  const events = useMemo(
+    () => buildTimeline(activeCase, entities, relationships, documents, timelineEvents),
+    [activeCase, entities, relationships, documents, timelineEvents]
+  );
 
-    list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    return list;
-  }, []);
+  const incidentTime = incidentDate ? new Date(incidentDate).getTime() : null;
 
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
       const evTime = new Date(ev.timestamp).getTime();
-      if (temporalFilter === 'before' && evTime > incidentTime) return false;
-      if (temporalFilter === 'after' && evTime < incidentTime) return false;
+      if (incidentTime !== null) {
+        if (temporalFilter === 'before' && evTime > incidentTime) return false;
+        if (temporalFilter === 'after' && evTime <= incidentTime) return false;
+      }
       if (selectedCategory !== 'all' && ev.category !== selectedCategory) return false;
       return true;
     });
   }, [events, temporalFilter, selectedCategory, incidentTime]);
 
-  const preCount = events.filter((e) => new Date(e.timestamp).getTime() <= incidentTime).length;
-  const postCount = events.filter((e) => new Date(e.timestamp).getTime() > incidentTime).length;
+  const preCount = incidentTime !== null ? events.filter((e) => new Date(e.timestamp).getTime() <= incidentTime).length : 0;
+  const postCount = incidentTime !== null ? events.filter((e) => new Date(e.timestamp).getTime() > incidentTime).length : 0;
+
+  // ---- Temporal scrubber: network state as-of the scrub position ----
+  const timeBounds = useMemo(() => {
+    if (events.length === 0) return null;
+    const times = events.map((ev) => new Date(ev.timestamp).getTime());
+    return { min: Math.min(...times), max: Math.max(...times) };
+  }, [events]);
+
+  const scrubTime = useMemo(() => {
+    if (!timeBounds) return null;
+    const t = timeBounds.min + (timeBounds.max - timeBounds.min) * scrubRatio;
+    return new Date(t).toISOString();
+  }, [timeBounds, scrubRatio]);
+
+  const scrubState = useMemo(
+    () => (scrubTime ? networkStateAtTime(scrubTime, entities, relationships) : null),
+    [scrubTime, entities, relationships]
+  );
+
+  const comparison = useMemo(
+    () => beforeAfterStats(incidentDate, events, entities, relationships),
+    [incidentDate, events, entities, relationships]
+  );
+
+  const scrubChange = (ratio: number) => {
+    setScrubRatio(ratio);
+    // Jumping the scrubber contextualizes the full chronology
+    setTemporalFilter('all');
+  };
 
   return (
     <div className="w-full h-full p-6 bg-noir-950 overflow-y-auto font-mono text-xs text-noir-200 space-y-6">
@@ -130,7 +106,9 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
               Investigation Chronology & Temporal Network Analysis
             </h2>
             <p className="text-[11px] text-noir-400">
-              Track how relationships evolved before and after the incident (Incident Anchor: {new Date(incidentDate).toLocaleString()}).
+              Derived live from {relationships.length} relationships, {documents.length} ingested documents and{' '}
+              {timelineEvents.length} committed AI events
+              {incidentDate ? ` (Incident Anchor: ${new Date(incidentDate).toLocaleString()})` : ' — no incident anchor set on this case'}.
             </p>
           </div>
         </div>
@@ -175,118 +153,204 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
             <option value="incident">Crime Incidents</option>
             <option value="communication">Communications</option>
             <option value="financial">Financial Transfers</option>
-            <option value="surveillance">Surveillance Observations</option>
+            <option value="surveillance">Surveillance & Movement</option>
             <option value="forensic">Forensic Recoveries</option>
+            <option value="document">Document Ingestion</option>
           </select>
         </div>
       </div>
 
-      {/* Before / After Comparison Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
-        <div className="p-4 bg-noir-900/90 border border-amber-accent/30 rounded-xl space-y-2">
+      {/* Temporal Scrubber — network evolution at any point in time */}
+      {timeBounds && (
+        <div className="p-4 bg-noir-900/90 border border-noir-700 rounded-xl space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-amber-accent flex items-center gap-1.5 uppercase">
-              <Calendar className="w-4 h-4" /> PHASE 1: PRE-INCIDENT NETWORK
+            <span className="font-bold text-noir-100 uppercase flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-crimson" /> Temporal Network Scrubber
             </span>
-            <span className="text-[10px] text-noir-400">Preparation & Surveillance</span>
-          </div>
-          <p className="text-noir-300 text-[11px] leading-relaxed">
-            Network centered on covert encrypted communications (14 calls) between Julian Marlowe and Daniel Vance via burner lines.
-          </p>
-          <div className="text-[10px] text-amber-accent font-bold">
-            Key Hub: <span className="text-noir-100">Julian Marlowe (Financier)</span> • Density: Medium
-          </div>
-        </div>
-
-        <div className="p-4 bg-noir-900/90 border border-cobalt/40 rounded-xl space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-cobalt flex items-center gap-1.5 uppercase">
-              <Calendar className="w-4 h-4" /> PHASE 2: POST-INCIDENT NETWORK
+            <span className="text-[11px] text-noir-400">
+              As of <strong className="text-noir-100">{scrubTime ? new Date(scrubTime).toLocaleString() : '—'}</strong>
             </span>
-            <span className="text-[10px] text-noir-400">Breach, Transit & Liquidation</span>
           </div>
-          <p className="text-noir-300 text-[11px] leading-relaxed">
-            Abrupt emergence of financial layering ($450,000 wire) to Elena Rostova and physical forensic traces (AFIS fingerprint match LP-4).
-          </p>
-          <div className="text-[10px] text-cobalt font-bold">
-            Key Hub: <span className="text-noir-100">Daniel Vance (Courier) & Elena Rostova</span> • Density: High
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.001}
+            value={scrubRatio}
+            onChange={(e) => scrubChange(parseFloat(e.target.value))}
+            className="w-full accent-crimson cursor-pointer"
+          />
+          <div className="flex items-center justify-between text-[10px] text-noir-500">
+            <span>{new Date(timeBounds.min).toLocaleString()}</span>
+            <span>{new Date(timeBounds.max).toLocaleString()}</span>
           </div>
-        </div>
-      </div>
-
-      {/* Chronological Timeline Stream */}
-      <div className="relative pl-6 border-l-2 border-noir-800 space-y-6">
-        {filteredEvents.map((ev) => {
-          const isAnchor = ev.category === 'incident';
-          return (
-            <div key={ev.id} className="relative group">
-              {/* Timeline Bullet Node */}
-              <div
-                className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                  isAnchor
-                    ? 'bg-crimson border-white ring-4 ring-crimson/30 animate-pulse'
-                    : ev.isPostIncident
-                    ? 'bg-cobalt border-noir-950'
-                    : 'bg-amber-accent border-noir-950'
-                }`}
-              />
-
-              <div
-                className={`p-4 rounded-xl border transition-all ${
-                  isAnchor
-                    ? 'bg-crimson/15 border-crimson/50 shadow-lg shadow-crimson/10'
-                    : 'bg-noir-900/80 border-noir-700 hover:border-noir-600'
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        isAnchor
-                          ? 'bg-crimson text-white'
-                          : ev.category === 'financial'
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                          : ev.category === 'communication'
-                          ? 'bg-amber-accent/20 text-amber-accent border border-amber-accent/40'
-                          : 'bg-noir-800 text-noir-300'
-                      }`}
-                    >
-                      {ev.category}
-                    </span>
-                    <h3 className="font-bold text-sm text-noir-100">{ev.title}</h3>
-                  </div>
-
-                  <span className="text-[11px] text-noir-400 flex items-center gap-1 font-mono">
-                    <Clock className="w-3.5 h-3.5" />
-                    {new Date(ev.timestamp).toLocaleString()}
-                  </span>
+          {scrubState && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
+                <div className="text-[9px] uppercase text-noir-500">Active Nodes</div>
+                <div className="text-lg font-bold text-noir-100">{scrubState.activeEntityIds.length}</div>
+                <div className="text-[9px] text-noir-600">of {entities.length} total</div>
+              </div>
+              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
+                <div className="text-[9px] uppercase text-noir-500">Active Edges</div>
+                <div className="text-lg font-bold text-noir-100">{scrubState.activeRelationshipIds.length}</div>
+                <div className="text-[9px] text-noir-600">of {relationships.length} total</div>
+              </div>
+              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
+                <div className="text-[9px] uppercase text-noir-500">Dominant Hub</div>
+                <div className="text-sm font-bold text-amber-accent truncate">{scrubState.dominantHubLabel || '—'}</div>
+                <div className="text-[9px] text-noir-600">{scrubState.dominantHubDegree} connections</div>
+              </div>
+              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
+                <div className="text-[9px] uppercase text-noir-500">Graph Density Signal</div>
+                <div className="text-lg font-bold text-noir-100">
+                  {entities.length > 1
+                    ? ((2 * scrubState.activeRelationshipIds.length) / (scrubState.activeEntityIds.length * (scrubState.activeEntityIds.length - 1) || 1)).toFixed(2)
+                    : '0.00'}
                 </div>
-
-                <p className="text-noir-300 text-[11px] mt-2 leading-relaxed">{ev.description}</p>
-
-                {/* Involved Entities Pills */}
-                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-noir-800">
-                  <span className="text-[10px] text-noir-500 uppercase">Involved Entities:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {ev.involvedEntityIds.map((id) => {
-                      const ent = entities.find((e) => e.id === id);
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => onSelectEntity(id)}
-                          className="px-2 py-0.5 bg-noir-800 hover:bg-noir-700 text-noir-200 hover:text-white rounded text-[10px] transition-colors"
-                        >
-                          {ent?.label || id}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                <div className="text-[9px] text-noir-600">edges / possible pairs</div>
               </div>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Before / After Comparison Summary Cards — computed from the filtered graph */}
+      {comparison && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
+          <div className="p-4 bg-noir-900/90 border border-amber-accent/30 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-amber-accent flex items-center gap-1.5 uppercase">
+                <Calendar className="w-4 h-4" /> PHASE 1: PRE-INCIDENT NETWORK
+              </span>
+              <span className="text-[10px] text-noir-400">90 days before anchor</span>
+            </div>
+            <p className="text-noir-300 text-[11px] leading-relaxed">
+              {comparison.before.relationshipCount} evidential link(s) recorded across{' '}
+              {comparison.before.entityCount} active entities in the preparation window.
+            </p>
+            <div className="text-[10px] text-amber-accent font-bold">
+              Key Hub:{' '}
+              <span className="text-noir-100">
+                {comparison.before.dominantHubLabel
+                  ? `${comparison.before.dominantHubLabel} (${comparison.before.dominantHubDegree} links)`
+                  : 'None emerged yet'}
+              </span>
+            </div>
+            <div className="text-[10px] text-noir-400">
+              Dominant activity: {comparison.before.topCategories.map((c) => `${c.category} ×${c.count}`).join(' · ') || '—'}
+            </div>
+          </div>
+
+          <div className="p-4 bg-noir-900/90 border border-cobalt/40 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-cobalt flex items-center gap-1.5 uppercase">
+                <Calendar className="w-4 h-4" /> PHASE 2: POST-INCIDENT NETWORK
+              </span>
+              <span className="text-[10px] text-noir-400">90 days after anchor</span>
+            </div>
+            <p className="text-noir-300 text-[11px] leading-relaxed">
+              {comparison.after.relationshipCount} evidential link(s) recorded across{' '}
+              {comparison.after.entityCount} active entities in the breach & liquidation window.
+            </p>
+            <div className="text-[10px] text-cobalt font-bold">
+              Key Hub:{' '}
+              <span className="text-noir-100">
+                {comparison.after.dominantHubLabel
+                  ? `${comparison.after.dominantHubLabel} (${comparison.after.dominantHubDegree} links)`
+                  : 'None recorded'}
+              </span>
+            </div>
+            <div className="text-[10px] text-noir-400">
+              Dominant activity: {comparison.after.topCategories.map((c) => `${c.category} ×${c.count}`).join(' · ') || '—'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chronological Timeline Stream */}
+      {filteredEvents.length === 0 ? (
+        <div className="py-16 text-center text-noir-400 space-y-2">
+          <Clock className="w-10 h-10 mx-auto text-noir-600" />
+          <p className="font-bold text-noir-200">No chronology events match the current filters.</p>
+          <p className="text-[11px]">
+            Events derive from relationship timestamps (validFrom / provenance), ingested documents and the case
+            incident anchor. Ingest evidence or set relationship dates to populate the chronology.
+          </p>
+        </div>
+      ) : (
+        <div className="relative pl-6 border-l-2 border-noir-800 space-y-6">
+          {filteredEvents.map((ev) => {
+            const isAnchor = ev.source === 'incident_anchor';
+            const isPost = incidentTime !== null && new Date(ev.timestamp).getTime() > incidentTime;
+            const isFuture = scrubTime ? new Date(ev.timestamp).getTime() > new Date(scrubTime).getTime() : false;
+            return (
+              <div key={ev.id} className={`relative group transition-opacity ${isFuture ? 'opacity-40' : ''}`}>
+                {/* Timeline Bullet Node */}
+                <div
+                  className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    isAnchor
+                      ? 'bg-crimson border-white ring-4 ring-crimson/30 animate-pulse'
+                      : isPost
+                      ? 'bg-cobalt border-noir-950'
+                      : 'bg-amber-accent border-noir-950'
+                  }`}
+                />
+
+                <div
+                  className={`p-4 rounded-xl border transition-all ${
+                    isAnchor
+                      ? 'bg-crimson/15 border-crimson/50 shadow-lg shadow-crimson/10'
+                      : 'bg-noir-900/80 border-noir-700 hover:border-noir-600'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${CATEGORY_STYLES[ev.category] || CATEGORY_STYLES.surveillance}`}>
+                        {ev.category}
+                      </span>
+                      <h3 className="font-bold text-sm text-noir-100">{ev.title}</h3>
+                      {ev.source === 'ai_extraction' && (
+                        <span className="px-1.5 py-0.5 bg-amber-accent/15 border border-amber-accent/30 text-amber-accent rounded text-[9px] font-bold">
+                          AI-EXTRACTED
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[11px] text-noir-400 flex items-center gap-1 font-mono">
+                      <Clock className="w-3.5 h-3.5" />
+                      {new Date(ev.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <p className="text-noir-300 text-[11px] mt-2 leading-relaxed">{ev.description}</p>
+
+                  {/* Involved Entities Pills */}
+                  {ev.involvedEntityIds.length > 0 && (
+                    <div className="flex items-center gap-2 mt-3 pt-2 border-t border-noir-800">
+                      <span className="text-[10px] text-noir-500 uppercase">Involved Entities:</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ev.involvedEntityIds.map((id) => {
+                          const ent = entities.find((e) => e.id === id);
+                          return (
+                            <button
+                              key={id}
+                              onClick={() => onSelectEntity(id)}
+                              className="px-2 py-0.5 bg-noir-800 hover:bg-noir-700 text-noir-200 hover:text-white rounded text-[10px] transition-colors"
+                            >
+                              {ent?.label || id}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

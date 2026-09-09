@@ -20,4 +20,6 @@ export function getGroqClient(): Groq | null {
 export const GROQ_MODELS = {
   PRIMARY_REASONING: 'openai/gpt-oss-120b',
   FAST_INFERENCE: 'openai/gpt-oss-20b',
+  /** Vision-capable multimodal model for forensic image analysis. */
+  VISION: 'meta-llama/llama-4-scout-17b-16e-instruct',
 };

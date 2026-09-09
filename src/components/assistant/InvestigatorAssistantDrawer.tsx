@@ -108,6 +108,10 @@ Select an action chip below or type your inquiry.`,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: q,
+          history: messages
+            .filter((m) => m.sender === 'user' || m.sender === 'assistant')
+            .slice(-8)
+            .map((m) => ({ role: m.sender, text: m.text })),
           caseContext: {
             title: activeCase?.title,
             caseNumber: activeCase?.caseNumber,

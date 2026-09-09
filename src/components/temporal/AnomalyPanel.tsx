@@ -1,24 +1,26 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { ShieldAlert, AlertTriangle, ArrowRight, Zap, MapPin, DollarSign, PhoneCall } from 'lucide-react';
-import { InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
+import { ShieldAlert, AlertTriangle, Zap, MapPin, DollarSign, PhoneCall } from 'lucide-react';
+import { InvestigationCase, InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
 import { detectSuspiciousPatterns } from '@/lib/patterns/anomalyDetectors';
 
 interface AnomalyPanelProps {
+  activeCase: InvestigationCase | null;
   entities: InvestigationEntity[];
   relationships: InvestigationRelationship[];
   onSelectEntity: (id: string) => void;
 }
 
 export const AnomalyPanel: React.FC<AnomalyPanelProps> = ({
+  activeCase,
   entities,
   relationships,
   onSelectEntity,
 }) => {
   const anomalies = useMemo(
-    () => detectSuspiciousPatterns(entities, relationships),
-    [entities, relationships]
+    () => detectSuspiciousPatterns(entities, relationships, activeCase?.incidentDate),
+    [entities, relationships, activeCase]
   );
 
   return (
@@ -37,7 +39,11 @@ export const AnomalyPanel: React.FC<AnomalyPanelProps> = ({
       </div>
 
       <p className="text-noir-400 text-[11px]">
-        Rule & topological graph heuristics identifying rapid financial hopping, communication surges, geographic anomalies, and covert intermediaries.
+        Rule & topological heuristics identifying rapid financial hopping, communication surges, geographic
+        anomalies, and covert intermediaries.
+        {activeCase?.incidentDate
+          ? ` Windows anchored to incident ${new Date(activeCase.incidentDate).toLocaleString()}.`
+          : ' WARNING: no incident anchor on this case — temporal correlation unavailable, severities downgraded.'}
       </p>
 
       {/* Anomaly Cards Grid */}

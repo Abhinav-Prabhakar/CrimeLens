@@ -15,13 +15,17 @@ import {
   Clock,
   RotateCcw,
   Download,
+  Upload as ImportIcon,
   MousePointer,
   GitBranch,
   Move,
+  Lasso,
   Search,
   Camera,
   History,
   FolderOpen,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import { InvestigationCase } from '@/lib/types/investigation';
 
@@ -31,6 +35,8 @@ interface ToolbarProps {
   activeTool: 'select' | 'connect' | 'lasso' | 'pan';
   threadColor: 'crimson' | 'twine' | 'cobalt' | 'shadow';
   filterTypes: Record<string, boolean>;
+  canUndo: boolean;
+  canRedo: boolean;
   onSelectView: (view: 'board' | 'graph' | 'patterns' | 'timeline') => void;
   onSelectTool: (tool: 'select' | 'connect' | 'lasso' | 'pan') => void;
   onSelectThreadColor: (color: 'crimson' | 'twine' | 'cobalt' | 'shadow') => void;
@@ -47,6 +53,9 @@ interface ToolbarProps {
   onOpenAuditLogs: () => void;
   onResetSeed: () => void;
   onExport: () => void;
+  onImport: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
   onAddQuickCard: (type: string) => void;
 }
 
@@ -63,6 +72,8 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
   activeTool,
   threadColor,
   filterTypes,
+  canUndo,
+  canRedo,
   onSelectView,
   onSelectTool,
   onSelectThreadColor,
@@ -79,6 +90,9 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
   onOpenAuditLogs,
   onResetSeed,
   onExport,
+  onImport,
+  onUndo,
+  onRedo,
   onAddQuickCard,
 }) => {
   return (
@@ -238,11 +252,35 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
           <div className="h-5 w-px bg-noir-700" />
 
           <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className="p-1.5 bg-noir-800 hover:bg-noir-700 disabled:opacity-30 text-noir-300 rounded border border-noir-700 transition-colors"
+            title="Undo (⌘Z)"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className="p-1.5 bg-noir-800 hover:bg-noir-700 disabled:opacity-30 text-noir-300 rounded border border-noir-700 transition-colors"
+            title="Redo (⌘⇧Z)"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+
+          <button
             onClick={onExport}
             className="p-1.5 bg-noir-800 hover:bg-noir-700 text-noir-300 rounded border border-noir-700"
             title="Export Case Bundle (.crimelens.json)"
           >
             <Download className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onImport}
+            className="p-1.5 bg-noir-800 hover:bg-noir-700 text-noir-300 rounded border border-noir-700"
+            title="Import Case Bundle (.crimelens.json)"
+          >
+            <ImportIcon className="w-4 h-4" />
           </button>
           <button
             onClick={onResetSeed}
@@ -276,6 +314,15 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
               title="Spool Connecting Thread (C)"
             >
               <GitBranch className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onSelectTool('lasso')}
+              className={`p-2.5 rounded-lg flex items-center justify-center transition-colors ${
+                activeTool === 'lasso' ? 'bg-crimson text-white shadow' : 'text-noir-400 hover:text-noir-200 hover:bg-noir-800'
+              }`}
+              title="Lasso Multi-Select (L)"
+            >
+              <Lasso className="w-4 h-4" />
             </button>
             <button
               onClick={() => onSelectTool('pan')}

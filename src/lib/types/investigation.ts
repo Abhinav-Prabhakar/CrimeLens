@@ -130,6 +130,8 @@ export interface AuditLogEntry {
   caseId: string;
   action:
     | 'case_created'
+    | 'case_updated'
+    | 'case_deleted'
     | 'entity_created'
     | 'entity_updated'
     | 'entity_deleted'
@@ -139,12 +141,50 @@ export interface AuditLogEntry {
     | 'relationship_deleted'
     | 'document_ingested'
     | 'ai_extraction_approved'
-    | 'report_generated';
+    | 'report_generated'
+    | 'link_prediction_confirmed'
+    | 'bundle_exported'
+    | 'bundle_imported'
+    | 'intel_triaged'
+    | 'intel_promoted'
+    | 'sos_dispatched';
   targetType: string;
   targetId: string;
   details: string;
   timestamp: string;
   investigator: string;
+}
+
+/**
+ * A chronologically placed investigative event.
+ * Derived automatically from relationships, documents and the case incident anchor,
+ * or pinned manually / committed from AI extraction (human-in-the-loop approved).
+ */
+export interface InvestigationTimelineEvent {
+  id: string;
+  caseId: string;
+  timestamp: string; // ISO — when the event occurred (best known)
+  title: string;
+  category: 'incident' | 'communication' | 'financial' | 'forensic' | 'surveillance' | 'document';
+  description: string;
+  involvedEntityIds: string[];
+  source:
+    | 'incident_anchor'
+    | 'relationship'
+    | 'ai_extraction'
+    | 'manual'
+    | 'document';
+  sourceRefId?: string; // relationship id / document id / audit id
+  createdAt: string;
+}
+
+/** Trusted well-wisher contact for the women safety escalation network (user-scoped, not case-scoped). */
+export interface SafetyContact {
+  id: string;
+  name: string;
+  relation: string;
+  phone: string;
+  createdAt: string;
 }
 
 export interface IdentityMatchCandidate {
