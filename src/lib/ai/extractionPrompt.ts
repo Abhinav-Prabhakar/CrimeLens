@@ -31,7 +31,7 @@ export const ExtractionResultSchema = z.object({
         'plan',
       ]),
       aliases: z.array(z.string()).default([]),
-      attributes: z.record(z.any()).default({}),
+      attributes: z.record(z.string(), z.any()).default({}),
       confidence: z.number().min(0).max(1),
       notes: z.string().optional(),
       excerpt: z.string().optional(),
