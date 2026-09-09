@@ -18,6 +18,6 @@ export function getGroqClient(): Groq | null {
 }
 
 export const GROQ_MODELS = {
-  PRIMARY_REASONING: 'llama-3.3-70b-versatile',
-  FAST_INFERENCE: 'llama-3.1-8b-instant',
+  PRIMARY_REASONING: 'openai/gpt-oss-120b',
+  FAST_INFERENCE: 'openai/gpt-oss-20b',
 };
