@@ -8,7 +8,7 @@
 [![Tests](https://img.shields.io/badge/Vitest-18%20Passed-emerald?logo=vitest)](https://vitest.dev/)
 [![Storage](https://img.shields.io/badge/Offline--First-IndexedDB-purple)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
 
-> **Transform fragmented criminal investigation material into an evolving, searchable, and explainable intelligence knowledge graph.**
+> **Turn fragmented investigative evidence into an evolving, searchable, and explainable intelligence knowledge graph.**
 
 ---
 
@@ -21,6 +21,7 @@ CrimeLens strictly adheres to **Responsible AI standards**:
 - AI outputs are framed as **investigative leads, anomalies, and hypotheses** with transparent confidence percentages and verifiable source provenance.
 - The system **never declares guilt** or makes definitive accusations of criminality.
 - Human-in-the-loop confirmation is required before any AI-extracted entity or connection enters the permanent knowledge graph.
+- **Zero Fallbacks**: All analysis executes directly against real models or returns explicit, actionable errors.
 
 ---
 
@@ -31,7 +32,7 @@ CrimeLens strictly adheres to **Responsible AI standards**:
    ┌───────────────────────────────────────┼───────────────────────────────────────┐
    ▼                                       ▼                                       ▼
 3D TACTICAL CORKBOARD             2D KNOWLEDGE GRAPH ANALYTICS            AI REASONING GATEWAY
-- Three.js Noir Canvas            - Dijkstra Shortest Path Solver         - Groq LLaMA 3.3 70B & 8B
+- Three.js Noir Canvas            - Dijkstra Shortest Path Solver         - Groq Cloud API Gateway
 - Physics-based Verlet Ropes      - Brandes Betweenness Centrality        - Prompt Injection Shields
 - Dynamic Catenary Draping        - Louvain Community Clusters            - Human-in-the-Loop Review
 - Procedural Evidence Textures    - Jaccard Missing Link Prediction       - Multi-Hypothesis Engine
@@ -51,35 +52,50 @@ High-performance analytical network diagram:
 - **Louvain Community Detection**: Partitions the network into syndicate cells, gangs, and operational clusters.
 - **Topological Link Prediction**: Surfaces covert, unrecorded associations between persons of interest using Jaccard Similarity, Adamic-Adar, and Resource Allocation indices.
 
-### 3. AI Document Ingestion & Staging Area
+### 3. Chronological Timeline & Before/After Comparison
+- Interactive temporal scrubber tracking network evolution across key events.
+- **Pre-Incident vs Post-Incident Comparison Mode**: Compares the covert preparation network against the post-breach transit and liquidation network.
+- Category filtering: crime incidents, communications, financial transfers, and forensic recoveries.
+
+### 4. AI Document Ingestion & Staging Area
 - Ingests unstructured FIRs, interrogation transcripts, CDR dumps, and financial transaction sheets.
-- Server-side parsing via **Groq LLaMA 3.3 70B Versatile** (with instant fallback to **LLaMA 3.1 8B**).
+- Server-side parsing via **Groq Cloud** in strict JSON schema mode.
 - **Prompt Injection Hardening**: Sanitizes and defangs adversarial jailbreak instructions hidden inside seized documents.
 - **Human-in-the-Loop Review**: Extracted entities and relationships are staged in an interactive review modal where investigators verify, edit confidence, or reject false leads before graph commit.
 
-### 4. Entity Resolution & Identity Disambiguation
+### 5. Entity Resolution & Identity Disambiguation
 - Discovers duplicate suspects recorded under slight spelling variations or aliases (e.g., *"Rahul Sharma"* vs *"Rahul K. Sharma"*).
 - Multi-signal similarity scoring: Levenshtein string distance, token abbreviations, shared phone numbers, vehicle registrations, and address matching.
 - Highlights conflicting attributes (e.g. incompatible reported ages) and enables one-click merging or alias linking.
 
-### 5. Suspicious Pattern & Anomaly Detection
+### 6. Suspicious Pattern & Anomaly Detection
 Rule and graph heuristics detecting:
 - **Rapid Financial Layering**: Structured hopping (Entity A → B → C) through intermediary accounts.
 - **Communication Bursts**: Sudden surges in call frequency immediately preceding an incident.
 - **Geographic Anomalies**: Suspect presence geolocated in the immediate incident sector during the breach window.
 - **Offshore Shell Structures**: Nominee corporate vehicles with overseas registrations.
 
-### 6. AI Investigator Assistant & Multi-Hypothesis Generator
+### 7. AI Investigator Assistant & Multi-Hypothesis Generator
 - Context-aware intelligence assistant grounded strictly in current case evidence.
 - Formulates **multiple alternative hypotheses** with supporting and contradicting observations.
 - Generates statutory FIR drafts and suggests potentially applicable sections under the **Bharatiya Nyaya Sanhita (BNS)** and Prevention of Money Laundering Act (PMLA) for prosecutor review.
 
-### 7. Offline-First IndexedDB Storage
+### 8. Case Management & Case Prioritization Ranking
+- Create, manage, and switch between multi-case dossiers.
+- Configurable prioritization ranking based on public risk severity, urgency, solvability, and network entity density.
+
+### 9. Forensic Image & Object Analysis
+- Visual evidence classification and vehicle license plate recognition with confidence intervals and uncertainty statements.
+
+### 10. Audit Trail & Chain of Custody
+- Immutable audit log recording every investigator action (case creation, entity edits, relationship confirmation, AI approvals).
+
+### 11. Offline-First IndexedDB Storage
 - All cases, dossiers, nodes, relationships, and audit logs persist locally in **IndexedDB** (`crimelens_investigation_db`).
 - Complete case backup and cross-team sharing via `.crimelens.json` export and import.
 - Operates seamlessly in air-gapped or low-connectivity tactical environments.
 
-### 8. Women Safety & Emergency Escalation
+### 12. Women Safety & Emergency Escalation
 - Trusted well-wisher circle registration.
 - One-touch emergency SOS simulation dispatching geolocated alerts to trusted contacts and the 1091 helpline.
 
@@ -98,7 +114,7 @@ pnpm test
 - `tests/unit/graphAlgorithms.test.ts` (5 tests): Shortest path, degree, betweenness centrality, Louvain communities, and link prediction.
 - `tests/unit/identityMatcher.test.ts` (4 tests): Levenshtein distance, abbreviations, phone/plate matching, and conflict flagging.
 - `tests/unit/anomalyDetectors.test.ts` (3 tests): Rapid financial hopping, communication burst, and geographic anomaly checks.
-- `tests/unit/sanitize.test.ts` (3 tests): Prompt injection neutralization and fallback heuristic NLP extraction.
+- `tests/unit/sanitize.test.ts` (3 tests): Prompt injection neutralization and fallback-free schema parsing.
 - `tests/stress/graphScalability.test.ts` (3 tests): Synthetic graph scalability benchmarks:
   - **100 Nodes**: Computed in < 20ms.
   - **1,000 Nodes**: Full shortest path and community detection in < 150ms.
@@ -114,7 +130,7 @@ pnpm test
 | **Language** | TypeScript 5.9 (Strict Type Checking) |
 | **Styling** | Tailwind CSS 3.4 (Tactical Noir Dark Mode) |
 | **3D Engine** | Three.js r185, GSAP 3.15, Custom Verlet Rope Physics |
-| **AI / LLM** | Groq Cloud SDK (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`) |
+| **AI / LLM** | Groq Cloud SDK (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`) |
 | **Offline DB** | IndexedDB via `idb` v8 + LocalStorage |
 | **Testing** | Vitest 3.2, JSDOM, React Testing Library |
 | **Deployment** | Vercel Edge / Serverless Production |

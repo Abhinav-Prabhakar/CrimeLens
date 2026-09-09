@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useInvestigationStore } from '@/lib/store/useInvestigationStore';
 import { CorkboardToolbar } from '@/components/board/CorkboardToolbar';
@@ -12,6 +12,11 @@ import { CaseReportModal } from '@/components/reports/CaseReportModal';
 import { WomenSafetyModal } from '@/components/safety/WomenSafetyModal';
 import { PublicIntelModal } from '@/components/safety/PublicIntelModal';
 import { AnomalyPanel } from '@/components/temporal/AnomalyPanel';
+import { InvestigationTimelineView } from '@/components/temporal/InvestigationTimelineView';
+import { CaseSwitcherModal } from '@/components/board/CaseSwitcherModal';
+import { GlobalSearchModal } from '@/components/ui/GlobalSearchModal';
+import { AuditLogModal } from '@/components/ui/AuditLogModal';
+import { ImageAnalysisModal } from '@/components/board/ImageAnalysisModal';
 
 // Dynamically import Three.js Corkboard and 2D Canvas Graph to ensure pure client-side execution
 const InvestigationCorkboard = dynamic(
@@ -56,6 +61,31 @@ export default function CrimeLensMainPage() {
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isSafetyOpen, setIsSafetyOpen] = useState(false);
   const [isIntelOpen, setIsIntelOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCasesOpen, setIsCasesOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isAuditLogsOpen, setIsAuditLogsOpen] = useState(false);
+
+  // Global Keyboard Shortcuts (Cmd+K / Ctrl+K, V, C)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === 'v' || e.key === 'V') setActiveTool('select');
+      if (e.key === 'c' || e.key === 'C') setActiveTool('connect');
+      if (e.key === ' ') {
+        e.preventDefault();
+        setActiveTool('pan');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveTool]);
 
   // Selected Entity
   const selectedEntity = entities.find((e) => e.id === selectedEntityId) || null;
@@ -148,6 +178,10 @@ export default function CrimeLensMainPage() {
         onOpenReports={() => setIsReportsOpen(true)}
         onOpenSafety={() => setIsSafetyOpen(true)}
         onOpenIntel={() => setIsIntelOpen(true)}
+        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenCases={() => setIsCasesOpen(true)}
+        onOpenImageAnalysis={() => setIsImageModalOpen(true)}
+        onOpenAuditLogs={() => setIsAuditLogsOpen(true)}
         onResetSeed={resetToSeed}
         onExport={handleExport}
         onAddQuickCard={handleAddQuickCard}
@@ -190,6 +224,18 @@ export default function CrimeLensMainPage() {
           />
         )}
 
+        {activeView === 'timeline' && (
+          <InvestigationTimelineView
+            activeCase={activeCase}
+            entities={entities}
+            relationships={relationships}
+            onSelectEntity={(id) => {
+              setSelectedEntityId(id);
+              setActiveView('board');
+            }}
+          />
+        )}
+
         {activeView === 'patterns' && (
           <AnomalyPanel
             entities={entities}
@@ -213,6 +259,52 @@ export default function CrimeLensMainPage() {
           onDelete={deleteEntity}
         />
       )}
+
+      {/* Global Search Modal (Cmd+K) */}
+      <GlobalSearchModal
+        isOpen={isSearchOpen}
+        entities={entities}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectEntity={(id) => {
+          setSelectedEntityId(id);
+        }}
+      />
+
+      {/* Case Switcher & Case Prioritization Modal */}
+      <CaseSwitcherModal
+        isOpen={isCasesOpen}
+        activeCaseId={activeCase?.id || null}
+        onClose={() => setIsCasesOpen(false)}
+        onSelectCase={(newCase) => {
+          window.location.reload();
+        }}
+      />
+
+      {/* Forensic Image & Object Analysis Modal */}
+      <ImageAnalysisModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onAddEvidence={(evData) => {
+          addEntity({
+            label: evData.label,
+            type: evData.type,
+            visualType: evData.visualType,
+            confidence: evData.confidence,
+            notes: evData.notes,
+            boardPosition: {
+              x: (Math.random() - 0.5) * 20,
+              y: (Math.random() - 0.5) * 20,
+            },
+          });
+        }}
+      />
+
+      {/* Audit Log Trail Modal */}
+      <AuditLogModal
+        isOpen={isAuditLogsOpen}
+        caseId={activeCase?.id || ''}
+        onClose={() => setIsAuditLogsOpen(false)}
+      />
 
       {/* AI Document Ingestion & Staging Modal */}
       <DocumentIngestModal

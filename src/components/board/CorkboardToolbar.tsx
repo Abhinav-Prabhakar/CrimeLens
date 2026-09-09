@@ -12,12 +12,16 @@ import {
   Share2,
   LayoutGrid,
   ShieldAlert,
+  Clock,
   RotateCcw,
   Download,
   MousePointer,
   GitBranch,
   Move,
-  Plus,
+  Search,
+  Camera,
+  History,
+  FolderOpen,
 } from 'lucide-react';
 import { InvestigationCase } from '@/lib/types/investigation';
 
@@ -37,6 +41,10 @@ interface ToolbarProps {
   onOpenReports: () => void;
   onOpenSafety: () => void;
   onOpenIntel: () => void;
+  onOpenSearch: () => void;
+  onOpenCases: () => void;
+  onOpenImageAnalysis: () => void;
+  onOpenAuditLogs: () => void;
   onResetSeed: () => void;
   onExport: () => void;
   onAddQuickCard: (type: string) => void;
@@ -65,6 +73,10 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
   onOpenReports,
   onOpenSafety,
   onOpenIntel,
+  onOpenSearch,
+  onOpenCases,
+  onOpenImageAnalysis,
+  onOpenAuditLogs,
   onResetSeed,
   onExport,
   onAddQuickCard,
@@ -74,7 +86,7 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
       {/* ===================== TOP BAR ===================== */}
       <header className="fixed top-0 left-0 right-0 z-30 h-14 bg-noir-900/95 border-b border-noir-700 backdrop-blur-md px-4 flex items-center justify-between font-mono text-xs text-noir-200 select-none">
         {/* Brand & Case Info */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded bg-crimson flex items-center justify-center text-white font-black shadow-lg shadow-crimson/30">
               <Shield className="w-5 h-5" />
@@ -92,12 +104,18 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
 
           <div className="h-6 w-px bg-noir-700 hidden md:block" />
 
-          {/* Active Case Tag */}
-          <div className="hidden md:flex items-center gap-2 bg-noir-850 px-2.5 py-1 rounded border border-noir-700 text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-noir-100 font-bold">{activeCase?.title || 'Active Investigation'}</span>
+          {/* Active Case Tag / Switcher */}
+          <button
+            onClick={onOpenCases}
+            className="hidden md:flex items-center gap-2 bg-noir-850 hover:bg-noir-800 px-2.5 py-1 rounded border border-noir-700 text-[11px] transition-colors"
+            title="Switch or Create Cases"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-amber-accent" />
+            <span className="text-noir-100 font-bold max-w-[160px] truncate">
+              {activeCase?.title || 'Active Case'}
+            </span>
             <span className="text-noir-500">[{activeCase?.caseNumber || 'CR-001'}]</span>
-          </div>
+          </button>
         </div>
 
         {/* Center View Selector */}
@@ -119,6 +137,14 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
             <Share2 className="w-3.5 h-3.5" /> Knowledge Graph
           </button>
           <button
+            onClick={() => onSelectView('timeline')}
+            className={`px-3 py-1 rounded flex items-center gap-1.5 transition-colors ${
+              activeView === 'timeline' ? 'bg-crimson text-white font-bold' : 'text-noir-400 hover:text-noir-200'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" /> Timeline
+          </button>
+          <button
             onClick={() => onSelectView('patterns')}
             className={`px-3 py-1 rounded flex items-center gap-1.5 transition-colors ${
               activeView === 'patterns' ? 'bg-crimson text-white font-bold' : 'text-noir-400 hover:text-noir-200'
@@ -130,13 +156,24 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
 
         {/* Right Action Modals Bar */}
         <div className="flex items-center gap-2">
+          {/* Global Search Button */}
+          <button
+            onClick={onOpenSearch}
+            className="px-2.5 py-1.5 bg-noir-800 hover:bg-noir-700 text-noir-200 rounded border border-noir-700 flex items-center gap-1.5 transition-colors"
+            title="Search Entities (Cmd+K)"
+          >
+            <Search className="w-3.5 h-3.5 text-noir-400" />
+            <span className="hidden xl:inline text-noir-400">Search</span>
+            <kbd className="hidden xl:inline px-1 bg-noir-900 border border-noir-700 rounded text-[9px]">⌘K</kbd>
+          </button>
+
           <button
             onClick={onOpenIngest}
             className="px-2.5 py-1.5 bg-noir-800 hover:bg-noir-700 text-noir-200 rounded border border-noir-700 flex items-center gap-1.5 transition-colors"
             title="Ingest FIR / CDR / Documents"
           >
             <Upload className="w-3.5 h-3.5 text-crimson" />
-            <span className="hidden lg:inline">Ingest Data</span>
+            <span className="hidden lg:inline">Ingest</span>
           </button>
 
           <button
@@ -164,6 +201,22 @@ export const CorkboardToolbar: React.FC<ToolbarProps> = ({
           >
             <FileText className="w-3.5 h-3.5" />
             <span className="hidden lg:inline">Reports</span>
+          </button>
+
+          <button
+            onClick={onOpenImageAnalysis}
+            className="p-1.5 bg-noir-800 hover:bg-noir-700 text-noir-300 rounded border border-noir-700"
+            title="Forensic Image & Object Analysis"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={onOpenAuditLogs}
+            className="p-1.5 bg-noir-800 hover:bg-noir-700 text-noir-300 rounded border border-noir-700"
+            title="Audit Trail & Chain of Custody"
+          >
+            <History className="w-4 h-4" />
           </button>
 
           <button
