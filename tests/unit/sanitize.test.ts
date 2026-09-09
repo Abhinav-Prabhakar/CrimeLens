@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeInvestigativeInput } from '../../src/lib/ai/sanitize';
-import { heuristicExtract } from '../../src/lib/ai/extractionPrompt';
+import { parseAndNormalizeExtraction } from '../../src/lib/ai/extractionPrompt';
 
-describe('Sanitization & Ingestion Security', () => {
+describe('Sanitization & Schema Validation', () => {
   it('should neutralize adversarial prompt injection commands', () => {
     const malicious = `
 Suspect note:
@@ -30,22 +30,32 @@ Suspect Daniel Vance spotted fleeing in Red Sedan MH-01-BX-4912. Contacted +91 9
     expect(result.cleanText).toContain('Pier 9 warehouse breached');
   });
 
-  it('should extract entities using the heuristic fallback when LLM is unavailable', () => {
-    const text = `
-Interrogation notes:
-Suspect Daniel Vance was in phone communication with +91 98112-44120.
-A wire transfer of $450,000 was initiated. Getaway car license MH-01-BX-4912.
-    `;
+  it('should strictly parse and normalize LLM extraction objects without fallbacks', () => {
+    const rawLlmOutput = {
+      investigativeSummary: 'Extracted suspect meeting and wire transfer.',
+      entities: [
+        { label: 'Daniel Vance', type: 'suspect', visualType: 'person', confidence: 0.95 },
+        { label: '+91 98112-44120', type: 'contactInfo', visualType: 'phone', confidence: 0.9 },
+        { label: '$450,000 wire', type: 'financialTransaction', visualType: 'money', confidence: 0.92 },
+      ],
+      relationships: [
+        { sourceLabel: 'Daniel Vance', targetLabel: '+91 98112-44120', predicate: 'contacted', confidence: 0.9 },
+        { sourceLabel: 'Daniel Vance', targetLabel: '$450,000 wire', predicate: 'transferred_funds', confidence: 0.95 },
+      ],
+      timelineEvents: [
+        { timestamp: '2026-09-01T21:30:00Z', description: 'Breach occurred', entitiesInvolved: ['Daniel Vance'] },
+      ],
+    };
 
-    const extracted = heuristicExtract(text);
-    expect(extracted.entities.length).toBeGreaterThan(0);
+    const parsed = parseAndNormalizeExtraction(rawLlmOutput);
+    expect(parsed.entities.length).toBe(3);
+    expect(parsed.entities[0].type).toBe('person');
+    expect(parsed.entities[1].type).toBe('phone');
+    expect(parsed.entities[2].type).toBe('account');
 
-    const hasPhone = extracted.entities.some((e) => e.type === 'phone');
-    const hasVehicle = extracted.entities.some((e) => e.type === 'vehicle');
-    const hasAccount = extracted.entities.some((e) => e.type === 'account');
-
-    expect(hasPhone).toBe(true);
-    expect(hasVehicle).toBe(true);
-    expect(hasAccount).toBe(true);
+    expect(parsed.relationships.length).toBe(2);
+    expect(parsed.relationships[0].predicate).toBe('CALLED');
+    expect(parsed.relationships[1].predicate).toBe('TRANSFERRED_FUNDS');
+    expect(parsed.relationships[1].threadColor).toBe('cobalt');
   });
 });

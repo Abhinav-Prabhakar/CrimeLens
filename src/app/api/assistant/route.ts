@@ -5,14 +5,24 @@ import { sanitizeInvestigativeInput } from '@/lib/ai/sanitize';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { query, caseContext, mode = 'chat' } = body;
+    const { query, caseContext } = body;
 
-    if (!query || typeof query !== 'string') {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return NextResponse.json({ error: 'Query is required for assistant inquiry.' }, { status: 400 });
     }
 
     const sanitized = sanitizeInvestigativeInput(query);
     const groq = getGroqClient();
+
+    if (!groq) {
+      return NextResponse.json(
+        {
+          error:
+            'Groq API Key is not configured in server environment (GROQ_API_KEY). AI Assistant reasoning cannot proceed.',
+        },
+        { status: 500 }
+      );
+    }
 
     // Context format
     const contextSummary = caseContext
@@ -21,13 +31,13 @@ CASE TITLE: ${caseContext.title || 'Unknown'}
 LEAD INVESTIGATOR: ${caseContext.leadInvestigator || 'Unassigned'}
 ENTITIES RECORDED (${caseContext.entities?.length || 0}):
 ${(caseContext.entities || [])
-  .slice(0, 25)
+  .slice(0, 30)
   .map((e: any) => `- [${e.type.toUpperCase()}] ${e.label} (Confidence: ${(e.confidence * 100).toFixed(0)}%, Status: ${e.status})`)
   .join('\n')}
 
 KNOWN RELATIONSHIPS (${caseContext.relationships?.length || 0}):
 ${(caseContext.relationships || [])
-  .slice(0, 30)
+  .slice(0, 40)
   .map((r: any) => `- ${r.sourceLabel || r.sourceId} --[${r.predicate} (${r.label || ''})]--> ${r.targetLabel || r.targetId} (Conf: ${(r.confidence * 100).toFixed(0)}%)`)
   .join('\n')}
 `
@@ -45,15 +55,6 @@ ETHICAL & RESPONSIBLE AI CONSTRAINTS:
 4. If asked for legal charge assistance, suggest potentially applicable sections (e.g. IPC/BNS or equivalent statutes) strictly as investigative drafting aids requiring review by the public prosecutor.
 5. If ambiguous evidence exists, provide MULTIPLE ALTERNATIVE HYPOTHESES with supporting and contradicting observations.
 `;
-
-    if (!groq) {
-      // Local fallback response when offline
-      return NextResponse.json({
-        success: true,
-        source: 'local_offline_assistant',
-        response: `[OFFLINE ANALYSIS]\nBased on current case entities (${caseContext?.entities?.length || 0} nodes), the primary network hubs center around ${caseContext?.entities?.[1]?.label || 'key suspects'}. Further physical evidence and CDR logs are recommended before drawing conclusions.\n\nInvestigative lead: Cross-reference burner phone activity with tower azimuth logs.`,
-      });
-    }
 
     const completion = await groq.chat.completions.create({
       model: GROQ_MODELS.PRIMARY_REASONING,
@@ -75,15 +76,21 @@ ${sanitized.cleanText}
       ],
     });
 
-    const reply = completion.choices[0]?.message?.content || 'No response generated.';
+    const reply = completion.choices[0]?.message?.content;
+    if (!reply) {
+      return NextResponse.json({ error: 'Groq assistant returned an empty response.' }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
-      source: 'groq_llama_70b',
+      source: 'groq_llama_ai',
       response: reply,
     });
   } catch (err: any) {
     console.error('Assistant API error:', err);
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Groq Assistant Reasoning failed: ${err.message || 'Internal error'}` },
+      { status: 500 }
+    );
   }
 }
