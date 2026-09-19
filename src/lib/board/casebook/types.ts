@@ -186,6 +186,8 @@ export interface WorldHooks {
   onHint(html: string): void;
   /** zoom percent changed */
   onZoomChange(pct: number): void;
+  /** world wants the tool switched (e.g. lasso → select after finishing) */
+  onToolRequest?(t: BoardTool): void;
 }
 
 export interface WorldApi {

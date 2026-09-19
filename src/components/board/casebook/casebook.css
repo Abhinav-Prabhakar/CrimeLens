@@ -1,0 +1,820 @@
+/* ==========================================================================
+   CASEBOOK chrome — ported verbatim from the reference single-file app
+   (/tmp/casebook-ref/index.html lines 7–811) and scoped under .cb-scope.
+   Keep ids, class names, colors and pixel values EXACTLY as the reference.
+   ========================================================================== */
+
+.cb-scope {
+  --bg: #0c0a09;
+  --bar: #100e0c;
+  --panel: #141110;
+  --panel2: #1a1614;
+  --line: #2a2522;
+  --txt: #d9d4cc;
+  --dim: #8d867c;
+  --faint: #5d574f;
+  --red: #e13c32;
+  --red-dim: #8c2620;
+  --mono: "Courier New", Courier, monospace;
+  --sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  font-family: var(--sans);
+  color: var(--txt);
+}
+.cb-scope,
+.cb-scope * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.cb-scope #stage {
+  position: fixed;
+  inset: 0;
+  cursor: grab;
+}
+.cb-scope #stage.dragging {
+  cursor: grabbing;
+}
+.cb-scope #stage.item {
+  cursor: pointer;
+}
+.cb-scope #stage.connecting {
+  cursor: crosshair;
+}
+.cb-scope #stage.lasso {
+  cursor: crosshair;
+}
+.cb-scope #lassoCanvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+.cb-scope #vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse 120% 90% at 44% 40%,
+    transparent 42%,
+    rgba(0, 0, 0, 0.34) 76%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+.cb-scope #glare {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  background: radial-gradient(
+    ellipse 46% 34% at 30% 16%,
+    rgba(255, 196, 110, 0.15),
+    transparent 70%
+  );
+}
+
+/* ===================== TOP BAR ===================== */
+.cb-scope #topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  background: var(--bar);
+  border-bottom: 1px solid var(--line);
+}
+.cb-scope .iconbtn {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  cursor: pointer;
+  color: var(--dim);
+  border: 1px solid transparent;
+  flex: 0 0 auto;
+  background: transparent;
+  position: relative;
+  transition: all 0.15s;
+}
+.cb-scope .iconbtn:hover {
+  background: var(--panel2);
+  color: var(--txt);
+}
+.cb-scope .iconbtn svg {
+  width: 17px;
+  height: 17px;
+}
+.cb-scope #logo {
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.cb-scope #logo .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  animation: pulse 2.2s infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.cb-scope #crumb {
+  color: var(--dim);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cb-scope #crumb b {
+  color: var(--txt);
+  font-weight: 600;
+}
+.cb-scope #crumb .sep {
+  margin: 0 8px;
+  color: var(--faint);
+}
+.cb-scope #tspace {
+  flex: 1;
+}
+.cb-scope #avatars {
+  display: flex;
+  align-items: center;
+}
+.cb-scope .av {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--bar);
+  margin-left: -7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+.cb-scope .av.more {
+  background: var(--panel2);
+  color: var(--dim);
+  font-size: 10px;
+}
+.cb-scope #shareBtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cb-scope #shareBtn:hover {
+  border-color: var(--dim);
+}
+.cb-scope .badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: var(--red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
+/* ===================== LEFT RAIL ===================== */
+.cb-scope #rail {
+  position: fixed;
+  left: 12px;
+  top: 70px;
+  bottom: 86px;
+  width: 64px;
+  z-index: 20;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.cb-scope #rail::-webkit-scrollbar {
+  display: none;
+}
+.cb-scope .rtool {
+  width: 52px;
+  padding: 7px 0 6px;
+  border-radius: 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  color: var(--dim);
+  transition: all 0.15s;
+  flex: 0 0 auto;
+}
+.cb-scope .rtool svg {
+  width: 18px;
+  height: 18px;
+}
+.cb-scope .rtool span {
+  font-size: 8.5px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.15;
+}
+.cb-scope .rtool:hover {
+  background: var(--panel2);
+  color: var(--txt);
+}
+.cb-scope .rtool.on {
+  background: var(--red-dim);
+  color: #fff;
+}
+.cb-scope .rsep {
+  width: 36px;
+  height: 1px;
+  background: var(--line);
+  margin: 5px 0;
+  flex: 0 0 auto;
+}
+
+/* ===================== BOTTOM BAR ===================== */
+.cb-scope #bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  pointer-events: none;
+}
+.cb-scope #bottombar > * {
+  pointer-events: auto;
+}
+.cb-scope .bpill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--txt);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.cb-scope .bpill:hover {
+  border-color: var(--dim);
+}
+.cb-scope .bpill svg {
+  width: 15px;
+  height: 15px;
+  color: var(--dim);
+}
+.cb-scope .bpill .cnt {
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.cb-scope #bspace {
+  flex: 1;
+}
+.cb-scope #navcluster {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cb-scope #minimap {
+  width: 120px;
+  height: 52px;
+  background: #080606;
+  cursor: pointer;
+  border-right: 1px solid var(--line);
+}
+.cb-scope .nbtn {
+  width: 40px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+}
+.cb-scope .nbtn:hover {
+  background: var(--panel2);
+  color: var(--txt);
+}
+.cb-scope .nbtn.on {
+  color: #fff;
+  background: var(--red-dim);
+}
+.cb-scope .nbtn svg {
+  width: 16px;
+  height: 16px;
+}
+.cb-scope #zoomPct {
+  min-width: 52px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--txt);
+}
+
+/* ===================== RIGHT INSPECTOR ===================== */
+.cb-scope #inspector {
+  position: fixed;
+  right: 12px;
+  top: 70px;
+  bottom: 86px;
+  width: 296px;
+  z-index: 20;
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cb-scope #inspector.open {
+  display: flex;
+}
+.cb-scope #insHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  flex: 0 0 auto;
+}
+.cb-scope .eyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.cb-scope #insBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.cb-scope #itemCard {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.cb-scope #itemThumb {
+  width: 74px;
+  height: 74px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.cb-scope #itemName {
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.cb-scope #itemType {
+  font-size: 12px;
+  color: var(--dim);
+  margin-top: 3px;
+}
+.cb-scope #itemMeta {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+.cb-scope .insSec {
+  margin-top: 18px;
+}
+.cb-scope .insSecHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.cb-scope .connRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  font-size: 12.5px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.cb-scope .connRow:hover {
+  background: var(--panel2);
+}
+.cb-scope .connDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+}
+.cb-scope .connName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.cb-scope .connBar {
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.cb-scope .connBar i {
+  display: block;
+  height: 100%;
+  background: var(--red);
+}
+.cb-scope .connStr {
+  width: 52px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--dim);
+  flex: 0 0 auto;
+}
+.cb-scope #viewAll {
+  width: 100%;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.cb-scope #viewAll:hover {
+  border-color: var(--dim);
+}
+.cb-scope #tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cb-scope .tag {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11.5px;
+  padding: 4px 9px;
+  color: var(--txt);
+}
+.cb-scope .tag.add {
+  color: var(--dim);
+  cursor: pointer;
+}
+.cb-scope .tag.add:hover {
+  color: var(--txt);
+  border-color: var(--dim);
+}
+.cb-scope #strBlocks {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.cb-scope #strBlocks i {
+  width: 16px;
+  height: 12px;
+  border-radius: 2.5px;
+  background: var(--line);
+}
+.cb-scope #strBlocks i.f {
+  background: var(--red);
+}
+.cb-scope #strLabelRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 8px;
+}
+.cb-scope #strWord {
+  font-weight: 600;
+}
+.cb-scope #strPct {
+  color: var(--dim);
+}
+.cb-scope #notesList {
+  font-size: 12.5px;
+  color: var(--dim);
+  line-height: 1.5;
+}
+.cb-scope .noteRow {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--txt);
+}
+.cb-scope .noteRow small {
+  display: block;
+  color: var(--faint);
+  font-size: 10.5px;
+  margin-top: 2px;
+}
+.cb-scope #noteInput {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--txt);
+  font-size: 12.5px;
+  padding: 9px 11px;
+  outline: none;
+  font-family: var(--sans);
+}
+.cb-scope #noteInput:focus {
+  border-color: var(--dim);
+}
+.cb-scope #multiSel {
+  font-size: 12.5px;
+  color: var(--dim);
+  padding: 8px 0;
+}
+
+/* ===================== POPOVERS / OVERLAYS ===================== */
+.cb-scope .pop {
+  position: fixed;
+  z-index: 40;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 190px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  display: none;
+}
+.cb-scope .pop.open {
+  display: block;
+}
+.cb-scope .popTitle {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  color: var(--dim);
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 6px 8px;
+}
+.cb-scope .popRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.cb-scope .popRow:hover {
+  background: var(--panel2);
+}
+.cb-scope .popRow input {
+  accent-color: var(--red);
+}
+.cb-scope .popRow small {
+  color: var(--faint);
+  margin-left: auto;
+  font-size: 10.5px;
+}
+.cb-scope #graphOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 5, 4, 0.72);
+  backdrop-filter: blur(4px);
+}
+.cb-scope #graphOverlay.open {
+  display: flex;
+}
+.cb-scope #graphCard {
+  width: min(860px, 92vw);
+  height: min(560px, 80vh);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cb-scope #graphHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.cb-scope #graphCanvas {
+  flex: 1;
+  width: 100%;
+}
+.cb-scope #toast {
+  position: fixed;
+  bottom: 92px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 60;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-size: 12.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.cb-scope #toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* editor */
+.cb-scope #editor {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 5, 4, 0.62);
+  backdrop-filter: blur(3px);
+}
+.cb-scope #editor.open {
+  display: flex;
+}
+.cb-scope #editcard {
+  width: min(440px, 90vw);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+.cb-scope #edittext {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  background: var(--panel2);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.5;
+  outline: none;
+  margin-top: 12px;
+}
+.cb-scope #edittext:focus {
+  border-color: var(--dim);
+}
+.cb-scope #editrow {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.cb-scope .btn {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cb-scope .btn:hover {
+  border-color: var(--dim);
+}
+.cb-scope .btn.primary {
+  background: var(--red-dim);
+  border-color: var(--red);
+}
+
+.cb-scope #hint {
+  position: fixed;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  background: rgba(12, 10, 9, 0.7);
+  padding: 6px 14px;
+  border-radius: 7px;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+  max-width: 92vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cb-scope #hint b {
+  color: var(--txt);
+}
+.cb-scope #fileinput {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .cb-scope #inspector {
+    width: 260px;
+  }
+}
+@media (max-width: 860px) {
+  .cb-scope #crumb .hidesm {
+    display: none;
+  }
+}
+
+/* Opening pull-in — CSS equivalents of the reference's gsap.from() intro
+ * tweens (index.html 4365–4384): topbar y:-60 / rail x:-90 / bottombar y:80. */
+@keyframes cbTopIn {
+  from { transform: translateY(-60px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes cbRailIn {
+  from { transform: translateX(-90px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes cbBottomIn {
+  from { transform: translateY(80px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.cb-scope #topbar { animation: cbTopIn 0.8s 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.cb-scope #rail { animation: cbRailIn 0.8s 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.cb-scope #bottombar { animation: cbBottomIn 0.8s 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
