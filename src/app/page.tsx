@@ -7,6 +7,7 @@ import { useInvestigationStore } from '@/lib/store/useInvestigationStore';
 import { CasebookChrome } from '@/components/board/casebook/CasebookChrome';
 import { CasebookInspector } from '@/components/board/casebook/CasebookInspector';
 import { toast } from '@/components/board/casebook/toast';
+import { CasebookToast } from '@/components/board/casebook/CasebookToast';
 import { defaultSpecForType, type WorldApi } from '@/lib/board/casebook';
 import { DocumentIngestModal } from '@/components/ingestion/DocumentIngestModal';
 import { EntityResolutionModal } from '@/components/resolution/EntityResolutionModal';
@@ -505,6 +506,9 @@ export default function CrimeLensMainPage() {
           onDeleteRelationship={deleteRelationship}
         />
       )}
+
+      {/* Toast — lives at shell level so it shows on every view */}
+      <CasebookToast />
 
       {/* Global Search Modal (Cmd+K) */}
       <GlobalSearchModal

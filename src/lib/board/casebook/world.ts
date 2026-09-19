@@ -112,7 +112,7 @@ export function createWorld(opts: {
   const renderer = new THREE.WebGLRenderer({ canvas: stage, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -347,8 +347,13 @@ export function createWorld(opts: {
     const pin = makePin(PIN_COLORS[spec.type] ?? 0xb01722);
     pin.position.set(0, h / 2 - 0.7, 0.12);
     grp.add(pin);
-    grp.position.set(spec.x || 0, spec.y || 0, PAPER_Z);
-    grp.rotation.z = spec.rot != null ? spec.rot : rnd(-0.05, 0.05);
+    grp.position.set(
+      Number.isFinite(spec.x) ? spec.x : 0,
+      Number.isFinite(spec.y) ? spec.y : 0,
+      PAPER_Z,
+    );
+    grp.rotation.z =
+      spec.rot != null && Number.isFinite(spec.rot) ? spec.rot : rnd(-0.05, 0.05);
 
     const it: BoardItem = {
       id: spec.id, // entity id — NOT uid()
@@ -1068,9 +1073,10 @@ export function createWorld(opts: {
       const beingDragged =
         !!dragStarts && dragStarts.some((d) => d.it === it);
       if (!beingDragged) {
-        it.target.x = spec.x;
-        it.target.y = spec.y;
-        if (spec.rot != null) it.restRot = spec.rot;
+        if (Number.isFinite(spec.x)) it.target.x = spec.x;
+        if (Number.isFinite(spec.y)) it.target.y = spec.y;
+        if (spec.rot != null && Number.isFinite(spec.rot))
+          it.restRot = spec.rot;
       }
       applyFilterTo(it);
       return;
@@ -1126,7 +1132,7 @@ export function createWorld(opts: {
   /* ============================================================
      MAIN LOOP
      ============================================================ */
-  const clock = new THREE.Clock();
+  const clock = new THREE.Timer();
   let frameN = 0,
     lastPct = 0,
     paused = false,
@@ -1134,9 +1140,10 @@ export function createWorld(opts: {
 
   function frame() {
     rafId = requestAnimationFrame(frame);
+    clock.update();
     const dt = Math.min(clock.getDelta(), 0.033);
     if (paused) return;
-    const t = clock.elapsedTime;
+    const t = clock.getElapsed();
 
     for (const it of items) {
       const g = it.grp;

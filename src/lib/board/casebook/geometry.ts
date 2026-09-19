@@ -472,6 +472,10 @@ export class Rope implements RopeLike {
   }
 
   render(): void {
+    // skip while the rope is still growing in — a degenerate curve (all
+    // particles at one endpoint) produces NaN tube vertices in modern three
+    if (!this.live && this.grow < 0.03) return;
+    if (!Number.isFinite(this.pts[0]!.x)) return;
     const smp: THREE.Vector3[] = [];
     for (let i = 0; i < this.N; i += 2) smp.push(this.pts[i]);
     if ((this.N - 1) % 2) smp.push(this.pts[this.N - 1]);

@@ -12,7 +12,6 @@ import {
 } from '@/lib/board/casebook';
 import type { WorldApi, BoardTool, ThreadColorId } from '@/lib/board/casebook';
 import { CasebookHint } from '@/components/board/casebook/CasebookHint';
-import { CasebookToast } from '@/components/board/casebook/CasebookToast';
 import { CasebookEditorModal } from '@/components/board/casebook/CasebookEditorModal';
 
 interface CorkboardProps {
@@ -182,7 +181,6 @@ export const InvestigationCorkboard: React.FC<CorkboardProps> = ({
       <div id="glare" />
       <div id="vignette" />
       <CasebookHint html={hint} />
-      <CasebookToast />
       <CasebookEditorModal
         open={!!editEntity}
         title={`Edit ${(editEntity ? TYPE_LABEL[editEntity.visualType] : 'item').toLowerCase()}`}
