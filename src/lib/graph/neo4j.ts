@@ -619,6 +619,9 @@ export async function seedDatabase(force = false): Promise<{ seeded: boolean; ca
   if (cases.length > 0 && !force) {
     return { seeded: false, caseId: cases[0].caseItem.id };
   }
+  if (force && cases.some(({ caseItem }) => caseItem.id === SEED_CASE.id)) {
+    await deleteCase(SEED_CASE.id);
+  }
   await upsertCase(SEED_CASE);
   for (const ent of SEED_ENTITIES) await upsertEntity(ent);
   for (const rel of SEED_RELATIONSHIPS) await upsertRelationship(rel);

@@ -115,7 +115,7 @@ export function createWorld(opts: {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.55;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -196,8 +196,8 @@ export function createWorld(opts: {
   }
   buildBoard();
 
-  scene.add(new THREE.AmbientLight(0x322a20, 0.85));
-  const lamp = new THREE.SpotLight(0xffd6a0, 1.55, 460, 1.05, 0.55, 1.2);
+  scene.add(new THREE.AmbientLight(0x8a7055, 4));
+  const lamp = new THREE.SpotLight(0xffd6a0, 7, 460, 1.05, 0.55, 1.2);
   lamp.position.set(-38, 58, 80);
   lamp.castShadow = true;
   lamp.shadow.mapSize.set(2048, 2048);
@@ -206,10 +206,10 @@ export function createWorld(opts: {
   lamp.shadow.camera.far = 280;
   scene.add(lamp);
   scene.add(lamp.target);
-  const fillL = new THREE.DirectionalLight(0x9fb4cc, 0.28);
+  const fillL = new THREE.DirectionalLight(0x9fb4cc, 1.1);
   fillL.position.set(40, -10, 60);
   scene.add(fillL);
-  const rimL = new THREE.PointLight(0xffb066, 0.5, 140);
+  const rimL = new THREE.PointLight(0xffb066, 2.2, 140);
   rimL.position.set(42, 32, 26);
   scene.add(rimL);
 
@@ -1183,7 +1183,7 @@ export function createWorld(opts: {
     dust.step(dt, t);
     rig.apply(t, camera, lamp.target);
     lamp.intensity =
-      1.55 + Math.sin(t * 13.7) * 0.012 + Math.sin(t * 3.1) * 0.02;
+      7 + Math.sin(t * 13.7) * 0.055 + Math.sin(t * 3.1) * 0.09;
 
     if (++frameN % 6 === 0) {
       drawMinimap();

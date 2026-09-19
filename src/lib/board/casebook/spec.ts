@@ -11,14 +11,14 @@ const EDITABLE_TYPES = new Set(['photo', 'suspect', 'sticky', 'doc', 'news', 'ma
 
 export function itemSpecForEntity(ent: InvestigationEntity): ItemSpec {
   const a = ent.attributes || {};
-  const text = ent.notes || ent.label || '';
+  const text = a.cardText || ent.notes || ent.label || '';
   const spec: ItemSpec = {
     id: ent.id,
     type: ent.visualType,
     x: ent.boardPosition?.x ?? 0,
     y: ent.boardPosition?.y ?? 0,
     rot: ent.boardPosition?.rotation,
-    title: ent.label,
+    title: a.cardTitle || ent.label,
     text,
     created: ent.createdAt ? Date.parse(ent.createdAt) : undefined,
     by: ent.provenance?.sourceTitle || 'Investigator',

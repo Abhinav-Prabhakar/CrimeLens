@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { itemSpecForEntity, ropeSpecForRelationship, specSignature, defaultSpecForType } from '@/lib/board/casebook/spec';
 import type { InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
+import { SEED_ENTITIES, SEED_RELATIONSHIPS } from '@/lib/storage/seedData';
 
 const baseEntity: InvestigationEntity = {
   id: 'e1',
@@ -57,6 +58,16 @@ describe('itemSpecForEntity', () => {
     expect(ph.imageUrl).toBe('data:image/png;base64,x');
   });
 
+  it('uses dedicated card copy without replacing investigation notes', () => {
+    const spec = itemSpecForEntity({
+      ...baseEntity,
+      attributes: { cardTitle: '4B', cardText: 'Evidence caption' },
+    });
+    expect(spec.title).toBe('4B');
+    expect(spec.text).toBe('Evidence caption');
+    expect(baseEntity.notes).toBe('CFO, Lowell Tech · rival');
+  });
+
   it('maps bag number/date overrides', () => {
     const bag = itemSpecForEntity({
       ...baseEntity,
@@ -105,6 +116,38 @@ describe('ropeSpecForRelationship', () => {
   it('defaults unknown colors to crimson', () => {
     const rope = ropeSpecForRelationship({ ...rel, threadColor: 'bogus' as any });
     expect(rope.colorHex).toBe(0xb01722);
+  });
+});
+
+describe('Casebook seed composition', () => {
+  it('includes every procedural evidence-card type', () => {
+    expect(new Set(SEED_ENTITIES.map((entity) => entity.visualType))).toEqual(
+      new Set([
+        'photo',
+        'suspect',
+        'sticky',
+        'doc',
+        'news',
+        'print',
+        'map',
+        'statement',
+        'bag',
+        'key',
+        'plan',
+      ]),
+    );
+  });
+
+  it('ships the full predefined dossier and connected evidence threads', () => {
+    expect(SEED_ENTITIES.length).toBeGreaterThanOrEqual(20);
+    expect(SEED_RELATIONSHIPS.length).toBeGreaterThanOrEqual(14);
+    expect(
+      SEED_ENTITIES.every(
+        (entity) =>
+          Math.abs(entity.boardPosition.x) <= 60 &&
+          Math.abs(entity.boardPosition.y) <= 32,
+      ),
+    ).toBe(true);
   });
 });
 

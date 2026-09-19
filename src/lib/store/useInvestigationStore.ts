@@ -162,8 +162,13 @@ export function useInvestigationStore() {
       setRelationships(state.relationships);
       setDocuments(state.documents);
       setTimelineEvents(state.timelineEvents);
-      setSelectedEntityId(null);
-      setSelectedEntityIds([]);
+      const initialSelection =
+        state.caseItem.id === 'case_blackwood_2026' &&
+        state.entities.some((entity) => entity.id === 'ent_scene')
+          ? 'ent_scene'
+          : null;
+      setSelectedEntityId(initialSelection);
+      setSelectedEntityIds(initialSelection ? [initialSelection] : []);
       historyRef.current = [];
       futureRef.current = [];
       refreshHistoryFlags();

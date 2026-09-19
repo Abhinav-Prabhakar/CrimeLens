@@ -31,6 +31,9 @@
 .cb-scope #stage {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
   cursor: grab;
 }
 .cb-scope #stage.dragging {
@@ -48,6 +51,9 @@
 .cb-scope #lassoCanvas {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
   pointer-events: none;
   z-index: 4;
 }
