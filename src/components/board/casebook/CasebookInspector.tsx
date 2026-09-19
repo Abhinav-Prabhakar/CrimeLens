@@ -100,6 +100,10 @@ export const CasebookInspector: React.FC<CasebookInspectorProps> = (props) => {
   } = props;
 
   const [showAll, setShowAll] = useState(false);
+  const [label, setLabel] = useState(entity?.label ?? '');
+  const [aliasesText, setAliasesText] = useState(
+    (entity?.aliases ?? []).join(', '),
+  );
   const [newAttrKey, setNewAttrKey] = useState('');
   const [newAttrValue, setNewAttrValue] = useState('');
 
@@ -115,11 +119,24 @@ export const CasebookInspector: React.FC<CasebookInspectorProps> = (props) => {
       r.sourceId === entity.id ? r.targetId : r.sourceId;
     const worldConns = getConnections(entity.id) ?? [];
     if (worldConns.length) {
+      const added = new Set<string>();
       for (const c of worldConns) {
+        for (const rel of touching.filter((r) => otherOf(r) === c.otherId)) {
+          if (added.has(rel.id)) continue;
+          added.add(rel.id);
+          conns.push({
+            otherId: c.otherId,
+            confidence: rel.confidence,
+            rel,
+          });
+        }
+      }
+      for (const rel of touching) {
+        if (added.has(rel.id)) continue;
         conns.push({
-          otherId: c.otherId,
-          confidence: c.confidence,
-          rel: touching.find((r) => otherOf(r) === c.otherId),
+          otherId: otherOf(rel),
+          confidence: rel.confidence,
+          rel,
         });
       }
     } else {
@@ -157,6 +174,21 @@ export const CasebookInspector: React.FC<CasebookInspectorProps> = (props) => {
     !!entity &&
     (entity.status === 'investigator_confirmed' ||
       entity.status === 'verified_source');
+
+  const saveIdentity = () => {
+    if (!entity) return;
+    const nextLabel = label.trim() || entity.label;
+    onUpdate(entity.id, {
+      label: nextLabel,
+      aliases: aliasesText
+        .split(',')
+        .map((alias) => alias.trim())
+        .filter(
+          (alias) =>
+            alias.length > 0 && alias.toLowerCase() !== nextLabel.toLowerCase(),
+        ),
+    });
+  };
 
   const handleAddAttr = () => {
     if (!entity) return;
@@ -222,6 +254,41 @@ export const CasebookInspector: React.FC<CasebookInspectorProps> = (props) => {
 
             <div className="insSec">
               <div className="insSecHead">
+                <span className="eyebrow">Identity</span>
+              </div>
+              <div style={{ display: 'grid', gap: 7 }}>
+                <input
+                  value={label}
+                  aria-label="Entity designation"
+                  onChange={(e) => setLabel(e.target.value)}
+                  onBlur={saveIdentity}
+                  style={fieldStyle}
+                />
+                <input
+                  value={aliasesText}
+                  aria-label="Entity aliases"
+                  placeholder="Aliases, comma separated"
+                  onChange={(e) => setAliasesText(e.target.value)}
+                  onBlur={saveIdentity}
+                  style={fieldStyle}
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    color: 'var(--dim)',
+                    fontSize: 10.5,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  <span>Type: {entity.type}</span>
+                  <span>Card: {entity.visualType}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="insSec">
+              <div className="insSecHead">
                 <span className="eyebrow" id="connCount">
                   Connections ({conns.length})
                 </span>
@@ -249,6 +316,19 @@ export const CasebookInspector: React.FC<CasebookInspectorProps> = (props) => {
                       />
                       <span className="connName">
                         {other?.label ?? c.otherId}
+                        {rel && (
+                          <small
+                            style={{
+                              display: 'block',
+                              color: 'var(--faint)',
+                              fontSize: 9,
+                              marginTop: 2,
+                            }}
+                          >
+                            {rel.predicate} · {rel.status.toUpperCase()} ·{' '}
+                            {Math.round(rel.confidence * 100)}%
+                          </small>
+                        )}
                       </span>
                       <span className="connBar">
                         <i
@@ -261,30 +341,30 @@ export const CasebookInspector: React.FC<CasebookInspectorProps> = (props) => {
                         {strengthWord(c.confidence)}
                       </span>
                       {needsConfirm && rel && (
-                        <>
-                          <button
-                            className="tag"
-                            style={miniBtnStyle}
-                            title="Confirm link"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onConfirmRelationship(rel.id);
-                            }}
-                          >
-                            ✓
-                          </button>
-                          <button
-                            className="tag"
-                            style={miniBtnStyle}
-                            title="Sever link"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteRelationship(rel.id);
-                            }}
-                          >
-                            ×
-                          </button>
-                        </>
+                        <button
+                          className="tag"
+                          style={miniBtnStyle}
+                          title="Confirm link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onConfirmRelationship(rel.id);
+                          }}
+                        >
+                          ✓
+                        </button>
+                      )}
+                      {rel && (
+                        <button
+                          className="tag"
+                          style={miniBtnStyle}
+                          title="Sever link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteRelationship(rel.id);
+                          }}
+                        >
+                          ×
+                        </button>
                       )}
                     </div>
                   );

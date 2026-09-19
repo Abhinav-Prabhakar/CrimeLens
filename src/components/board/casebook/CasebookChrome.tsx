@@ -20,6 +20,7 @@ import type { InvestigationCase } from '@/lib/types/investigation';
 export interface CasebookChromeProps {
   activeCase: InvestigationCase | null;
   activeView: AppView;
+  graphStatus: 'checking' | 'online' | 'offline';
   activeTool: BoardTool;
   threadColor: ThreadColorId;
   filterTypes: Record<string, boolean>;
@@ -70,6 +71,7 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
   const {
     activeCase,
     activeView,
+    graphStatus,
     activeTool,
     threadColor,
     filterTypes,
@@ -138,23 +140,23 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
         onOpenAudit={onOpenAudit}
         kebabItems={kebabItems}
       />
-      {showBoardTools && (
-        <CasebookRail
-          activeTool={activeTool}
-          threadColor={threadColor}
-          onSelectTool={onSelectTool}
-          onSelectThreadColor={onSelectThreadColor}
-          onAddCard={onAddCard}
-          onPickImageFile={onPickImageFile}
-          appTools={appTools}
-          onExport={onExport}
-        />
-      )}
+      <CasebookRail
+        boardMode={showBoardTools}
+        activeTool={activeTool}
+        threadColor={threadColor}
+        onSelectTool={onSelectTool}
+        onSelectThreadColor={onSelectThreadColor}
+        onAddCard={onAddCard}
+        onPickImageFile={onPickImageFile}
+        appTools={appTools}
+        onExport={onExport}
+      />
       <CasebookBottomBar
         filterTypes={filterTypes}
         typeCounts={typeCounts}
         onToggleFilter={onToggleFilter}
         activeView={activeView}
+        graphStatus={graphStatus}
         onSelectView={onSelectView}
         timelineItems={timelineItems}
         onJumpToItem={onJumpToItem}

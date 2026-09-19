@@ -16,6 +16,7 @@ export interface CasebookBottomBarProps {
   typeCounts: Record<string, number>;
   onToggleFilter(t: string): void;
   activeView: AppView;
+  graphStatus: 'checking' | 'online' | 'offline';
   onSelectView(v: AppView): void;
   timelineItems: TimelineItem[];
   onJumpToItem(id: string): void;
@@ -47,6 +48,7 @@ export const CasebookBottomBar: React.FC<CasebookBottomBarProps> = ({
   typeCounts,
   onToggleFilter,
   activeView,
+  graphStatus,
   onSelectView,
   timelineItems,
   onJumpToItem,
@@ -212,6 +214,30 @@ export const CasebookBottomBar: React.FC<CasebookBottomBarProps> = ({
           </svg>
           Anomalies
         </button>
+        <div
+          className="bpill"
+          title={`Neo4j graph link: ${graphStatus}`}
+          style={{ cursor: 'default', pointerEvents: 'none' }}
+        >
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background:
+                graphStatus === 'online'
+                  ? '#4a8a5a'
+                  : graphStatus === 'offline'
+                    ? 'var(--red)'
+                    : '#c9a76a',
+              boxShadow:
+                graphStatus === 'online'
+                  ? '0 0 7px rgba(74,138,90,.7)'
+                  : undefined,
+            }}
+          />
+          NEO4J {graphStatus.toUpperCase()}
+        </div>
         <div id="bspace"></div>
         <div id="navcluster">
           <canvas id="minimap" width={240} height={104}></canvas>

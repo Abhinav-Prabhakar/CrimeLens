@@ -321,6 +321,7 @@ export default function CrimeLensMainPage() {
       <CasebookChrome
         activeCase={activeCase}
         activeView={activeView}
+        graphStatus={graphStatus}
         activeTool={activeTool}
         threadColor={threadColor}
         filterTypes={filterTypes}

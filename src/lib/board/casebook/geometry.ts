@@ -249,6 +249,13 @@ export function initRopeContext(ctx: {
   fiberTex?: THREE.Texture;
 }): void {
   ropeCtx = ctx;
+  ropes.length = 0;
+}
+
+export function clearRopeContext(scene: THREE.Scene): void {
+  if (ropeCtx?.scene !== scene) return;
+  ropeCtx = null;
+  ropes.length = 0;
 }
 
 /**
@@ -288,6 +295,53 @@ export function createCursorAnchor(): {
   };
 }
 
+const _tubePoint = new THREE.Vector3();
+const _tubeNormal = new THREE.Vector3();
+
+export function updateTubeGeometry(
+  geometry: THREE.TubeGeometry,
+  path: THREE.CatmullRomCurve3,
+  radius: number,
+  tubularSegments = 40,
+  radialSegments = 5,
+): void {
+  path.updateArcLengths();
+  const frames = path.computeFrenetFrames(tubularSegments, false);
+  const positions = geometry.getAttribute('position') as THREE.BufferAttribute;
+  const normals = geometry.getAttribute('normal') as THREE.BufferAttribute;
+  let offset = 0;
+
+  for (let i = 0; i <= tubularSegments; i++) {
+    path.getPointAt(i / tubularSegments, _tubePoint);
+    const N = frames.normals[i];
+    const B = frames.binormals[i];
+
+    for (let j = 0; j <= radialSegments; j++) {
+      const v = (j / radialSegments) * Math.PI * 2;
+      const sin = Math.sin(v);
+      const cos = -Math.cos(v);
+      _tubeNormal
+        .set(
+          cos * N.x + sin * B.x,
+          cos * N.y + sin * B.y,
+          cos * N.z + sin * B.z,
+        )
+        .normalize();
+      normals.setXYZ(offset, _tubeNormal.x, _tubeNormal.y, _tubeNormal.z);
+      positions.setXYZ(
+        offset,
+        _tubePoint.x + radius * _tubeNormal.x,
+        _tubePoint.y + radius * _tubeNormal.y,
+        _tubePoint.z + radius * _tubeNormal.z,
+      );
+      offset++;
+    }
+  }
+
+  positions.needsUpdate = true;
+  normals.needsUpdate = true;
+}
+
 export class Rope implements RopeLike {
   a: RopeAnchor;
   b: RopeAnchor;
@@ -314,6 +368,8 @@ export class Rope implements RopeLike {
   mesh: THREE.Mesh;
   meta: { label: string | null; confidence: number; created: number };
   private scene: THREE.Scene;
+  private samples: THREE.Vector3[];
+  private curve: THREE.CatmullRomCurve3;
 
   constructor(
     a: RopeAnchor,
@@ -342,6 +398,10 @@ export class Rope implements RopeLike {
       this.pts.push(p);
       this.prev.push(p.clone());
     }
+    this.samples = [];
+    for (let i = 0; i < this.N; i += 2) this.samples.push(this.pts[i]);
+    if ((this.N - 1) % 2) this.samples.push(this.pts[this.N - 1]);
+    this.curve = new THREE.CatmullRomCurve3(this.samples);
     this.phase = rnd(0, 6.28);
     this.dying = false;
     this.freeB = false;
@@ -366,6 +426,7 @@ export class Rope implements RopeLike {
     this.mesh.castShadow = true;
     if (this.live) this.mesh.renderOrder = 5;
     this.scene.add(this.mesh);
+    ropes.push(this);
     if (this.a.item) this.a.item.ropes.push(this);
     if (this.b.item) this.b.item.ropes.push(this);
     this.meta = {
@@ -476,13 +537,27 @@ export class Rope implements RopeLike {
     // particles at one endpoint) produces NaN tube vertices in modern three
     if (!this.live && this.grow < 0.03) return;
     if (!Number.isFinite(this.pts[0]!.x)) return;
-    const smp: THREE.Vector3[] = [];
-    for (let i = 0; i < this.N; i += 2) smp.push(this.pts[i]);
-    if ((this.N - 1) % 2) smp.push(this.pts[this.N - 1]);
-    const curve = new THREE.CatmullRomCurve3(smp);
-    const old = this.mesh.geometry;
-    this.mesh.geometry = new THREE.TubeGeometry(curve, 40, this.thick, 5, false);
-    old.dispose();
+    if (!(this.mesh.geometry instanceof THREE.TubeGeometry)) {
+      const old = this.mesh.geometry;
+      const geometry = new THREE.TubeGeometry(
+        this.curve,
+        40,
+        this.thick,
+        5,
+        false,
+      );
+      (geometry.getAttribute('position') as THREE.BufferAttribute).setUsage(
+        THREE.DynamicDrawUsage,
+      );
+      (geometry.getAttribute('normal') as THREE.BufferAttribute).setUsage(
+        THREE.DynamicDrawUsage,
+      );
+      this.mesh.geometry = geometry;
+      this.mesh.frustumCulled = false;
+      old.dispose();
+    } else {
+      updateTubeGeometry(this.mesh.geometry, this.curve, this.thick);
+    }
     this.mat.opacity = this.opacity;
   }
 

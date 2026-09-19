@@ -12,6 +12,7 @@ import {
   initRopeContext,
   anchorOf,
   createCursorAnchor,
+  updateTubeGeometry,
   Rope,
 } from '@/lib/board/casebook/geometry';
 import { BOARD_W, BOARD_H, Z_HOME } from '@/lib/board/casebook/types';
@@ -205,6 +206,37 @@ describe('createDust', () => {
       if (after[i] !== before[i]) moved = true;
     }
     expect(moved).toBe(true);
+  });
+});
+
+describe('updateTubeGeometry', () => {
+  it('matches a freshly allocated TubeGeometry while preserving buffers', () => {
+    const points = [
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(2, -1, 0.8),
+      new THREE.Vector3(4, -0.5, 0.7),
+      new THREE.Vector3(6, 2, 1),
+    ];
+    const curve = new THREE.CatmullRomCurve3(points);
+    const geometry = new THREE.TubeGeometry(curve, 40, 0.06, 5, false);
+    const position = geometry.getAttribute('position');
+    const normal = geometry.getAttribute('normal');
+    const index = geometry.index;
+
+    points[1].y = -2;
+    points[2].z = 1.4;
+    updateTubeGeometry(geometry, curve, 0.06);
+    const expected = new THREE.TubeGeometry(curve, 40, 0.06, 5, false);
+
+    expect(geometry.getAttribute('position')).toBe(position);
+    expect(geometry.getAttribute('normal')).toBe(normal);
+    expect(geometry.index).toBe(index);
+    expect(Array.from(position.array)).toEqual(
+      Array.from(expected.getAttribute('position').array),
+    );
+    expect(Array.from(normal.array)).toEqual(
+      Array.from(expected.getAttribute('normal').array),
+    );
   });
 });
 

@@ -11,6 +11,7 @@ export interface RailAppTool {
 }
 
 export interface CasebookRailProps {
+  boardMode: boolean;
   activeTool: BoardTool;
   threadColor: ThreadColorId;
   onSelectTool(t: BoardTool): void;
@@ -24,6 +25,7 @@ export interface CasebookRailProps {
 const cssHex = (n: number) => '#' + n.toString(16).padStart(6, '0');
 
 export const CasebookRail: React.FC<CasebookRailProps> = ({
+  boardMode,
   activeTool,
   threadColor,
   onSelectTool,
@@ -35,6 +37,8 @@ export const CasebookRail: React.FC<CasebookRailProps> = ({
 }) => {
   return (
     <div id="rail">
+      {boardMode && (
+        <>
       <div
         className={`rtool${activeTool === 'select' ? ' on' : ''}`}
         data-tool="select"
@@ -241,6 +245,26 @@ export const CasebookRail: React.FC<CasebookRailProps> = ({
         </svg>
         <span>Print</span>
       </div>
+      <div
+        className="rtool"
+        data-add="bag"
+        title="Evidence Bag"
+        onClick={() => onAddCard('bag')}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M6 3h12l2 18H4zM8 7h8M9 3v4M15 3v4" />
+        </svg>
+        <span>
+          Evidence
+          <br />
+          Bag
+        </span>
+      </div>
       <div className="rsep"></div>
       <div className="rtool" title="Thread color">
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
@@ -268,6 +292,8 @@ export const CasebookRail: React.FC<CasebookRailProps> = ({
         </div>
         <span>Yarn</span>
       </div>
+        </>
+      )}
       {appTools.length > 0 && (
         <>
           <div className="rsep"></div>

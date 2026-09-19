@@ -61,6 +61,7 @@ import {
   makePin,
   Rope,
   initRopeContext,
+  clearRopeContext,
   anchorOf,
   createCursorAnchor,
   screenToBoard,
@@ -250,6 +251,7 @@ export function createWorld(opts: {
   const hitMeshes: THREE.Object3D[] = [];
   /** last painted specSignature per item id — repaint only when it changes */
   const sigByItem = new Map<string, string>();
+  const thumbnailByItem = new Map<string, string>();
   /** loaded photo images (spec.imageUrl → HTMLImageElement) per item id */
   const imgByItem = new Map<string, HTMLImageElement>();
   const imgLoading = new Set<string>();
@@ -408,6 +410,7 @@ export function createWorld(opts: {
     const m = it.paper.material as THREE.MeshStandardMaterial;
     if (m.map) m.map.dispose();
     it.canvas = cv;
+    thumbnailByItem.delete(it.id);
     m.map = toTex(cv);
     m.needsUpdate = true;
   }
@@ -458,7 +461,8 @@ export function createWorld(opts: {
   /* ============================================================
      ROPES — keyed by relationship id + un-keyed pending ties
      ============================================================ */
-  initRopeContext({ scene, fiberTex: fiber() });
+  const fiberTex = fiber();
+  initRopeContext({ scene, fiberTex });
   const ropes: Rope[] = [];
   /** relationship id → rope */
   const keyedRopes = new Map<string, Rope>();
@@ -1090,6 +1094,7 @@ export function createWorld(opts: {
     if (!it) return;
     itemById.delete(id);
     sigByItem.delete(id);
+    thumbnailByItem.delete(id);
     imgByItem.delete(id);
     imgLoading.delete(id);
     tintByItem.delete(id);
@@ -1138,11 +1143,16 @@ export function createWorld(opts: {
     paused = false,
     rafId = 0;
 
-  function frame() {
+  function scheduleFrame() {
+    if (rafId || paused || document.hidden) return;
     rafId = requestAnimationFrame(frame);
+  }
+
+  function frame() {
+    rafId = 0;
+    if (paused || document.hidden) return;
     clock.update();
     const dt = Math.min(clock.getDelta(), 0.033);
-    if (paused) return;
     const t = clock.getElapsed();
 
     for (const it of items) {
@@ -1165,9 +1175,10 @@ export function createWorld(opts: {
 
     const sdt = dt / SUBSTEPS;
     for (const r of ropes) {
+      if (!r.mesh.visible) continue;
       for (let s = 0; s < SUBSTEPS; s++) r.step(sdt, t);
+      r.render();
     }
-    for (const r of ropes) r.render();
 
     dust.step(dt, t);
     rig.apply(t, camera, lamp.target);
@@ -1183,6 +1194,16 @@ export function createWorld(opts: {
       }
     }
     renderer.render(scene, camera);
+    scheduleFrame();
+  }
+
+  function onVisibilityChange() {
+    if (document.hidden) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    } else {
+      scheduleFrame();
+    }
   }
 
   /* ============================================================
@@ -1195,13 +1216,14 @@ export function createWorld(opts: {
   stage.addEventListener('dblclick', onDblClick);
   stage.addEventListener('wheel', onWheel, { passive: false });
   window.addEventListener('keydown', onKeyDown);
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   // opening: pull in from wide
   rig.z = 150;
   rig.tz = Z_HOME;
   setTool('select');
   findMinimap();
-  frame();
+  scheduleFrame();
 
   /* ============================================================
      API
@@ -1216,6 +1238,7 @@ export function createWorld(opts: {
     stage.removeEventListener('dblclick', onDblClick);
     stage.removeEventListener('wheel', onWheel);
     window.removeEventListener('keydown', onKeyDown);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     if (mm) mm.removeEventListener('pointerdown', onMmDown);
     if (mmMoveH) window.removeEventListener('pointermove', mmMoveH);
     if (mmUpH) window.removeEventListener('pointerup', mmUpH);
@@ -1226,9 +1249,15 @@ export function createWorld(opts: {
       gsap.killTweensOf(it.grp.scale);
       gsap.killTweensOf(it.grp.position);
       gsap.killTweensOf(it.grp.rotation);
+      gsap.killTweensOf(it.paper.scale);
+      gsap.killTweensOf(pinHead(it).scale);
+      gsap.killTweensOf(pinHeadMat(it));
       gsap.killTweensOf(it.glow.material);
     });
-    ropes.forEach((r) => gsap.killTweensOf(r));
+    ropes.forEach((r) => {
+      gsap.killTweensOf(r);
+      gsap.killTweensOf(r.mat);
+    });
     ropes.length = 0;
     keyedRopes.clear();
     ropeKeyOf.clear();
@@ -1237,12 +1266,14 @@ export function createWorld(opts: {
     itemById.clear();
     hitMeshes.length = 0;
     sigByItem.clear();
+    thumbnailByItem.clear();
     imgByItem.clear();
     imgLoading.clear();
     tintByItem.clear();
     sel.clear();
     primary = null;
     liveRope = null;
+    clearRopeContext(scene);
     scene.traverse((o) => {
       const m = o as THREE.Mesh;
       if (m.geometry) m.geometry.dispose();
@@ -1255,6 +1286,7 @@ export function createWorld(opts: {
           mm2.dispose();
         });
     });
+    fiberTex.dispose();
     renderer.dispose();
   }
 
@@ -1317,14 +1349,27 @@ export function createWorld(opts: {
       selectOnly(it);
     },
     setPaused(p: boolean) {
+      if (paused === p) return;
       paused = p;
+      if (paused) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      } else {
+        scheduleFrame();
+      }
     },
     getSpawnPoint() {
       return { x: rig.tx + rnd(-6, 6), y: rig.ty + rnd(-4, 4) };
     },
     getItemThumbnail(id: string) {
       const it = itemById.get(id);
-      return it ? it.canvas.toDataURL('image/jpeg', 0.6) : null;
+      if (!it) return null;
+      let thumbnail = thumbnailByItem.get(id);
+      if (!thumbnail) {
+        thumbnail = it.canvas.toDataURL('image/jpeg', 0.6);
+        thumbnailByItem.set(id, thumbnail);
+      }
+      return thumbnail;
     },
     getItemStrength(id: string) {
       const it = itemById.get(id);

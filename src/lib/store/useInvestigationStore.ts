@@ -248,8 +248,12 @@ export function useInvestigationStore() {
     }
   }, [loadCaseState, refreshCaseList, applyCaseState]);
 
+  const initStartedRef = useRef(false);
+
   useEffect(() => {
-    init();
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
+    void init();
   }, [init]);
 
   // Graph Engine Instance
