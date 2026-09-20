@@ -63,10 +63,10 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="cb-dossier cb-case-dossier w-full max-w-2xl bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
+        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
           <div className="flex items-center gap-2.5">
             <FolderOpen className="w-5 h-5 text-crimson" />
             <div>
@@ -83,7 +83,7 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+        <div className="cb-dossier-body flex-1 p-6 space-y-5 overflow-y-auto max-h-[75vh]">
           {!isCreating ? (
             <>
               {/* Existing Cases List */}
@@ -204,6 +204,31 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                     )}
                   </div>
                 ))}
+              </div>
+
+              <div className="grid grid-cols-4 gap-3 pt-2">
+                <div className="cb-metric p-3">
+                  <div className="cb-eyebrow">Cases</div>
+                  <div className="text-xl font-bold text-noir-100">{summaries.length}</div>
+                </div>
+                <div className="cb-metric p-3">
+                  <div className="cb-eyebrow">Entities</div>
+                  <div className="text-xl font-bold text-noir-100">
+                    {summaries.reduce((sum, item) => sum + item.entityCount, 0)}
+                  </div>
+                </div>
+                <div className="cb-metric p-3">
+                  <div className="cb-eyebrow">Links</div>
+                  <div className="text-xl font-bold text-noir-100">
+                    {summaries.reduce((sum, item) => sum + item.relationshipCount, 0)}
+                  </div>
+                </div>
+                <div className="cb-metric p-3">
+                  <div className="cb-eyebrow">Open alerts</div>
+                  <div className="text-xl font-bold text-crimson">
+                    {summaries.reduce((sum, item) => sum + item.anomalyCount, 0)}
+                  </div>
+                </div>
               </div>
             </>
           ) : (

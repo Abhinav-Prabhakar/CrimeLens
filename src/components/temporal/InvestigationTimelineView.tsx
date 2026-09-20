@@ -96,9 +96,9 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
   };
 
   return (
-    <div className="w-full h-full p-6 bg-noir-950 overflow-y-auto font-mono text-xs text-noir-200 space-y-6">
+    <div className="cb-workspace w-full h-full p-6 bg-noir-950 overflow-y-auto font-mono text-xs text-noir-200 space-y-6">
       {/* Header & Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-noir-700 pb-4">
+      <div className="cb-workspace-head flex flex-wrap items-center justify-between gap-4 border-b border-noir-700 p-4">
         <div className="flex items-center gap-3">
           <Clock className="w-5 h-5 text-amber-accent" />
           <div>

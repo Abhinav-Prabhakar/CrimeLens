@@ -24,9 +24,9 @@ export const AnomalyPanel: React.FC<AnomalyPanelProps> = ({
   );
 
   return (
-    <div className="w-full h-full p-6 bg-noir-950 overflow-y-auto font-mono text-xs text-noir-200 space-y-5">
+    <div className="cb-workspace w-full h-full p-6 bg-noir-950 overflow-y-auto font-mono text-xs text-noir-200 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-noir-700 pb-3">
+      <div className="cb-workspace-head flex items-center justify-between border-b border-noir-700 p-4">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 text-crimson" />
           <h2 className="text-base font-bold text-noir-100 uppercase tracking-wider">

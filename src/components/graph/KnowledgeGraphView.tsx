@@ -504,9 +504,9 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-noir-950 flex flex-col select-none overflow-hidden">
+    <div ref={containerRef} className="cb-workspace relative w-full h-full bg-noir-950 flex flex-col select-none overflow-hidden">
       {/* Top Analytical Bar */}
-      <div className="z-20 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-noir-900 border-b border-noir-700 text-xs font-mono text-noir-200">
+      <div className="cb-workspace-head z-20 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-noir-900 border-b border-noir-700 text-xs font-mono text-noir-200">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5 font-bold text-amber-accent">
             <Share2 className="w-4 h-4" /> KNOWLEDGE GRAPH ANALYTICS

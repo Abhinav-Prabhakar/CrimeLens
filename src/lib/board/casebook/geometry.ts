@@ -419,6 +419,9 @@ export class Rope implements RopeLike {
       bumpScale: 0.028,
       transparent: true,
       opacity: 1,
+      polygonOffset: true,
+      polygonOffsetFactor: -3,
+      polygonOffsetUnits: -12,
       emissive: new THREE.Color(color),
       emissiveIntensity: 0,
     });

@@ -39,6 +39,29 @@ interface ChatMessage {
   timestamp: string;
 }
 
+const introMessage = (
+  activeCase: InvestigationCase | null,
+  entities: InvestigationEntity[],
+  relationships: InvestigationRelationship[],
+): ChatMessage => ({
+  id: 'init_1',
+  sender: 'assistant',
+  text: `### CrimeLens Senior Intelligence Analyst Ready
+Case indexed: **${activeCase?.title || 'Operation Blackwood'}** (${entities.length} entities, ${relationships.length} relationships).
+
+I can assist you with:
+- **Relational Shortest-Path & Evidential Weighting**
+- **Multi-Hypothesis Formulation** (with supporting vs contradictory points)
+- **Financial Layering & Shell Account Tracing**
+- **Statutory Charge Drafting Assistance** (*Bharatiya Nyaya Sanhita / PMLA*)
+
+Select an action chip below or type your inquiry.`,
+  timestamp: new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  }),
+});
+
 const ACTION_PROMPTS = [
   { label: '🔗 Trace Marlowe ↔ Vance', prompt: 'Show me the complete evidential connection between Daniel Vance and Julian Marlowe.' },
   { label: '🧠 Multi-Hypothesis Analysis', prompt: 'Generate 3 distinct alternative hypotheses for the Pier 9 warehouse breach with supporting and contradictory evidence.' },
@@ -55,22 +78,8 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
   onClose,
   onSelectEntity,
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init_1',
-      sender: 'assistant',
-      text: `### 🕵️‍♂️ CrimeLens Senior Intelligence Analyst Ready
-Case indexed: **${activeCase?.title || 'Operation Blackwood'}** (${entities.length} entities, ${relationships.length} relationships).
-
-I can assist you with:
-- **Relational Shortest-Path & Evidential Weighting**
-- **Multi-Hypothesis Formulation** (with supporting vs contradictory points)
-- **Financial Layering & Shell Account Tracing**
-- **Statutory Charge Drafting Assistance** (*Bharatiya Nyaya Sanhita / PMLA*)
-
-Select an action chip below or type your inquiry.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [
+    introMessage(activeCase, entities, relationships),
   ]);
 
   const [inputQuery, setInputQuery] = useState('');
@@ -79,6 +88,14 @@ Select an action chip below or type your inquiry.`,
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMessages((current) =>
+      current.length === 1 && current[0]?.id === 'init_1'
+        ? [introMessage(activeCase, entities, relationships)]
+        : current,
+    );
+  }, [activeCase, entities, relationships]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -183,12 +200,12 @@ Select an action chip below or type your inquiry.`,
 
   return (
     <div
-      className={`fixed top-14 right-4 z-40 bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden transition-all duration-300 backdrop-blur-md ${
+      className={`cb-dossier cb-drawer fixed top-14 right-4 z-40 bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden transition-all duration-300 backdrop-blur-md ${
         isExpanded ? 'w-[750px] h-[88vh]' : 'w-[450px] h-[85vh]'
       }`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-noir-850 border-b border-noir-700">
+      <div className="cb-dossier-head flex items-center justify-between px-4 py-3 bg-noir-850 border-b border-noir-700">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-accent">
             <Sparkles className="w-4 h-4" />

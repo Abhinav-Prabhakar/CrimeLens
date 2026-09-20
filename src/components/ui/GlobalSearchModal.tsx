@@ -81,10 +81,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const totalResults = entityMatches.length + relMatches.length + docMatches.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-sm pt-20 p-4">
-      <div className="w-full max-w-2xl bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-sm pt-20 p-4">
+      <div className="cb-dossier cb-search-dossier w-full max-w-2xl bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
         {/* Search Input Bar */}
-        <div className="flex items-center px-4 py-3 bg-noir-850 border-b border-noir-700 gap-3">
+        <div className="cb-dossier-head flex items-center px-4 py-3 bg-noir-850 border-b border-noir-700 gap-3">
           <Search className="w-5 h-5 text-crimson flex-shrink-0" />
           <input
             ref={inputRef}
@@ -100,10 +100,43 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
         </div>
 
         {/* Results List */}
-        <div className="max-h-96 overflow-y-auto divide-y divide-noir-800 p-2">
+        <div className="cb-dossier-body flex-1 max-h-96 overflow-y-auto divide-y divide-noir-800 p-2">
           {!q ? (
-            <div className="p-8 text-center text-noir-500">
-              Type to search the entire case knowledge graph — entities, connections and ingested documents.
+            <div className="p-6 space-y-5">
+              <div className="text-center space-y-1">
+                <div className="cb-eyebrow">Search the current dossier</div>
+                <p className="text-noir-400">
+                  Find evidence by designation, alias, phone, plate, predicate, document text, or investigator note.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="cb-metric p-3 text-center">
+                  <User className="w-4 h-4 mx-auto mb-2 text-crimson" />
+                  <div className="text-lg font-bold text-noir-100">{entities.length}</div>
+                  <div className="cb-eyebrow">Entities</div>
+                </div>
+                <div className="cb-metric p-3 text-center">
+                  <LinkIcon className="w-4 h-4 mx-auto mb-2 text-amber-accent" />
+                  <div className="text-lg font-bold text-noir-100">{relationships.length}</div>
+                  <div className="cb-eyebrow">Connections</div>
+                </div>
+                <div className="cb-metric p-3 text-center">
+                  <FileText className="w-4 h-4 mx-auto mb-2 text-cobalt" />
+                  <div className="text-lg font-bold text-noir-100">{documents.length}</div>
+                  <div className="cb-eyebrow">Documents</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {['Pier 9', 'financial', 'forensic', 'vehicle'].map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => setQuery(term)}
+                    className="px-2.5 py-1 bg-noir-850 border border-noir-700 rounded text-noir-300 hover:text-noir-100 hover:border-noir-500"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : totalResults === 0 ? (
             <div className="p-8 text-center text-noir-400">
@@ -215,7 +248,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
           )}
         </div>
 
-        <div className="px-4 py-2 bg-noir-950 border-t border-noir-800 text-[10px] text-noir-500 flex justify-between">
+        <div className="cb-dossier-foot px-4 py-2 bg-noir-950 border-t border-noir-800 text-[10px] text-noir-500 flex justify-between">
           <span>
             {q
               ? `${totalResults} records matched across entities, connections and documents`

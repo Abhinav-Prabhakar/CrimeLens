@@ -85,10 +85,10 @@ export const PublicIntelModal: React.FC<PublicIntelModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-3xl max-h-[85vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="cb-dossier w-full max-w-3xl max-h-[85vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
+        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
           <div className="flex items-center gap-2.5">
             <Inbox className="w-5 h-5 text-amber-accent" />
             <div>

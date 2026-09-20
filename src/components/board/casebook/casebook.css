@@ -824,3 +824,239 @@
 .cb-scope #topbar { animation: cbTopIn 0.8s 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .cb-scope #rail { animation: cbRailIn 0.8s 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .cb-scope #bottombar { animation: cbBottomIn 0.8s 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+
+.cb-scope .cb-modal-backdrop {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(73, 50, 31, 0.18), transparent 42%),
+    rgba(5, 4, 3, 0.86) !important;
+  backdrop-filter: blur(6px) saturate(0.8);
+  animation: cbFadeIn 180ms ease-out both;
+}
+.cb-scope .cb-dossier {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(145deg, rgba(30, 24, 21, 0.985), rgba(13, 11, 10, 0.99)) !important;
+  border: 1px solid #3a322d !important;
+  border-radius: 10px !important;
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.66),
+    0 2px 0 rgba(255, 255, 255, 0.025) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.45) !important;
+  color: var(--txt);
+}
+.cb-scope .cb-dossier::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--red-dim) 12%, var(--red) 50%, var(--red-dim) 88%, transparent);
+  opacity: 0.72;
+}
+.cb-scope .cb-dossier::after,
+.cb-scope .cb-workspace::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(255, 255, 255, 0.14) 4px),
+    repeating-linear-gradient(90deg, transparent 0 7px, rgba(0, 0, 0, 0.2) 8px);
+  mix-blend-mode: soft-light;
+}
+.cb-scope .cb-dossier > *,
+.cb-scope .cb-workspace > * {
+  position: relative;
+  z-index: 1;
+}
+.cb-scope .cb-search-dossier {
+  min-height: 430px;
+}
+.cb-scope .cb-case-dossier {
+  min-height: 480px;
+}
+.cb-scope .cb-dossier-head {
+  min-height: 64px;
+  background:
+    linear-gradient(180deg, rgba(31, 25, 22, 0.98), rgba(18, 15, 13, 0.98)) !important;
+  border-bottom: 1px solid #3a322d !important;
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.025) inset;
+}
+.cb-scope .cb-dossier-head h1,
+.cb-scope .cb-dossier-head h2,
+.cb-scope .cb-dossier-head h3 {
+  color: var(--txt) !important;
+  font-family: var(--mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.cb-scope .cb-dossier-body {
+  background: rgba(12, 10, 9, 0.36);
+}
+.cb-scope .cb-dossier-foot {
+  background: rgba(13, 11, 10, 0.96) !important;
+  border-top: 1px solid var(--line) !important;
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.18);
+}
+.cb-scope .cb-dossier input,
+.cb-scope .cb-dossier textarea,
+.cb-scope .cb-dossier select,
+.cb-scope .cb-control {
+  background: #0d0b0a !important;
+  border: 1px solid #332c28 !important;
+  border-radius: 6px !important;
+  color: var(--txt) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.018) inset;
+}
+.cb-scope .cb-dossier input::placeholder,
+.cb-scope .cb-dossier textarea::placeholder {
+  color: var(--faint) !important;
+}
+.cb-scope .cb-dossier input:focus,
+.cb-scope .cb-dossier textarea:focus,
+.cb-scope .cb-dossier select:focus,
+.cb-scope .cb-control:focus {
+  border-color: var(--red-dim) !important;
+  box-shadow: 0 0 0 2px rgba(225, 60, 50, 0.1) !important;
+  outline: none;
+}
+.cb-scope .cb-dossier button,
+.cb-scope .cb-workspace button {
+  font-family: var(--mono);
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+.cb-scope .cb-dossier button:active,
+.cb-scope .cb-workspace button:active {
+  transform: translateY(1px);
+}
+.cb-scope .cb-dossier button:focus-visible,
+.cb-scope .cb-workspace button:focus-visible,
+.cb-scope #topbar button:focus-visible,
+.cb-scope #rail [role="button"]:focus-visible,
+.cb-scope #rail button:focus-visible,
+.cb-scope #bottombar button:focus-visible {
+  outline: 1px solid var(--red);
+  outline-offset: 2px;
+}
+.cb-scope .cb-dossier .rounded-xl {
+  border-radius: 8px !important;
+}
+.cb-scope .cb-dossier .rounded-lg {
+  border-radius: 6px !important;
+}
+.cb-scope .cb-dossier [class*="bg-noir-950"],
+.cb-scope .cb-dossier [class*="bg-noir-900"] {
+  border-color: var(--line);
+}
+.cb-scope .cb-workspace {
+  position: relative;
+  isolation: isolate;
+  padding-top: 70px !important;
+  padding-right: 18px !important;
+  padding-bottom: 88px !important;
+  padding-left: 88px !important;
+  background:
+    radial-gradient(circle at 48% 28%, rgba(72, 48, 30, 0.14), transparent 38%),
+    linear-gradient(145deg, #15110f, #090706 72%) !important;
+  color: var(--txt);
+}
+.cb-scope.cb-has-inspector .cb-workspace {
+  padding-right: 314px !important;
+}
+.cb-scope .cb-workspace-head {
+  background:
+    linear-gradient(180deg, rgba(27, 22, 19, 0.98), rgba(16, 13, 12, 0.98)) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 8px;
+  box-shadow:
+    0 12px 35px rgba(0, 0, 0, 0.24),
+    0 1px 0 rgba(255, 255, 255, 0.02) inset;
+}
+.cb-scope .cb-surface,
+.cb-scope .cb-workspace [class*="bg-noir-900"] {
+  background:
+    linear-gradient(145deg, rgba(25, 21, 18, 0.96), rgba(13, 11, 10, 0.96)) !important;
+  border-color: var(--line) !important;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+}
+.cb-scope .cb-workspace input,
+.cb-scope .cb-workspace textarea,
+.cb-scope .cb-workspace select {
+  background: #0d0b0a !important;
+  border-color: #332c28 !important;
+  color: var(--txt) !important;
+}
+.cb-scope .cb-workspace input:focus,
+.cb-scope .cb-workspace textarea:focus,
+.cb-scope .cb-workspace select:focus {
+  border-color: var(--red-dim) !important;
+  outline: none;
+}
+.cb-scope .cb-drawer {
+  position: fixed !important;
+  top: 64px !important;
+  right: 12px !important;
+  bottom: 84px !important;
+  height: auto !important;
+  border-left-color: #4a3b34 !important;
+  box-shadow: -28px 0 70px rgba(0, 0, 0, 0.58) !important;
+}
+.cb-scope .cb-eyebrow {
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.cb-scope .cb-metric {
+  background: #0e0c0b;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.018) inset;
+}
+.cb-scope .cb-paper-sheet {
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(72, 92, 105, 0.12) 24px),
+    linear-gradient(100deg, #d8cfbb, #eee7d7 45%, #cfc3ad) !important;
+  border: 1px solid #9f927c !important;
+  border-radius: 2px !important;
+  color: #29221d !important;
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.38),
+    0 0 30px rgba(74, 53, 30, 0.12) inset;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.22);
+}
+@keyframes cbFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (max-width: 860px) {
+  .cb-scope .cb-workspace {
+    padding-left: 76px !important;
+    padding-right: 10px !important;
+  }
+  .cb-scope .cb-dossier {
+    max-width: calc(100vw - 20px) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cb-scope .cb-modal-backdrop,
+  .cb-scope .cb-dossier,
+  .cb-scope .cb-workspace,
+  .cb-scope .cb-dossier button,
+  .cb-scope .cb-workspace button {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

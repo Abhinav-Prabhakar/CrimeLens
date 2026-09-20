@@ -119,8 +119,8 @@ export function createWorld(opts: {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0c0a09);
-  scene.fog = new THREE.Fog(0x0c0a09, 120, 300);
+  scene.background = new THREE.Color(0x1a120d);
+  scene.fog = new THREE.Fog(0x1a120d, 120, 300);
 
   function buildBoard() {
     const corkMat = new THREE.MeshStandardMaterial({
@@ -186,12 +186,17 @@ export function createWorld(opts: {
       p.castShadow = true;
       scene.add(p);
     });
+    const wallTex = wood();
+    wallTex.wrapT = THREE.RepeatWrapping;
+    wallTex.repeat.set(12, 8);
     const wall = new THREE.Mesh(
       new THREE.PlaneGeometry(700, 400),
-      new THREE.MeshStandardMaterial({ color: 0x18201c, roughness: 1 }),
+      new THREE.MeshBasicMaterial({
+        map: wallTex,
+        color: 0x8a7460,
+      }),
     );
     wall.position.z = -4;
-    wall.receiveShadow = true;
     scene.add(wall);
   }
   buildBoard();
@@ -321,11 +326,15 @@ export function createWorld(opts: {
       h = card.h;
     const cv = paintSpec(spec);
     const grp = new THREE.Group();
+    const stackOrder = items.length;
     const mat = new THREE.MeshStandardMaterial({
       map: toTex(cv),
       roughness: 0.88,
       metalness: 0,
       side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -1 - stackOrder,
+      polygonOffsetUnits: -4 - stackOrder * 4,
     });
     const paper = new THREE.Mesh(
       bentPaperGeo(w, h, spec.curl != null ? spec.curl : card.curl),
@@ -333,6 +342,7 @@ export function createWorld(opts: {
     );
     paper.castShadow = true;
     paper.receiveShadow = true;
+    paper.renderOrder = 10 + stackOrder;
     grp.add(paper);
     const glow = new THREE.Mesh(
       new THREE.PlaneGeometry(w + 1.4, h + 1.4),
@@ -345,9 +355,13 @@ export function createWorld(opts: {
       }),
     );
     glow.position.z = -0.09;
+    glow.renderOrder = stackOrder;
     grp.add(glow);
     const pin = makePin(PIN_COLORS[spec.type] ?? 0xb01722);
     pin.position.set(0, h / 2 - 0.7, 0.12);
+    pin.traverse((object) => {
+      object.renderOrder = 100 + stackOrder;
+    });
     grp.add(pin);
     grp.position.set(
       Number.isFinite(spec.x) ? spec.x : 0,
@@ -371,7 +385,7 @@ export function createWorld(opts: {
       text: spec.text || '',
       title: spec.title || '',
       ropes: [],
-      baseZ: PAPER_Z + rnd(0, 0.06),
+      baseZ: PAPER_Z + stackOrder * 0.006,
       hoverLift: 0,
       dragLift: 0,
       target: new THREE.Vector3().copy(grp.position),

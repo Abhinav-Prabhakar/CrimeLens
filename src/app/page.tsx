@@ -301,7 +301,11 @@ export default function CrimeLensMainPage() {
     .map((e) => ({ id: e.id, name: e.label || e.visualType, created: Date.parse(e.createdAt || '0') || Date.now() }));
 
   return (
-    <main className="cb-scope relative w-screen h-screen overflow-hidden bg-noir-950">
+    <main
+      className={`cb-scope relative w-screen h-screen overflow-hidden bg-noir-950 ${
+        selectedEntity || selectedEntityIds.length > 1 ? 'cb-has-inspector' : ''
+      }`}
+    >
       {/* Storage health banner */}
       {dbError && (
         <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 max-w-2xl px-3 py-2 bg-crimson/15 border border-crimson/50 rounded-lg font-mono text-[11px] text-crimson flex items-center gap-2 backdrop-blur-md">

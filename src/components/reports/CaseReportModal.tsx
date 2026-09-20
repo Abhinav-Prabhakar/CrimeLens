@@ -165,10 +165,10 @@ ${relationships
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-4xl max-h-[90vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="cb-dossier w-full max-w-4xl max-h-[90vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
+        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
           <div className="flex items-center gap-2.5">
             <FileText className="w-5 h-5 text-amber-accent" />
             <div>
@@ -221,7 +221,7 @@ ${relationships
 
         {/* Report Preview */}
         <div className="flex-1 overflow-y-auto p-6 bg-noir-950">
-          <pre className="p-4 bg-noir-900 border border-noir-800 rounded-lg text-noir-200 text-[11px] font-mono leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
+          <pre className="cb-paper-sheet p-4 bg-noir-900 border border-noir-800 rounded-lg text-noir-200 text-[11px] font-mono leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
             {reportText}
           </pre>
         </div>
