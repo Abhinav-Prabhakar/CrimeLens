@@ -14,7 +14,7 @@ The system should feel:
 - cinematic without reducing usability;
 - physical where evidence is handled;
 - precise and restrained where analysis is displayed;
-- consistent across corkboard, graph, timeline, reports, AI, and safety workflows.
+- consistent across corkboard, graph, timeline, reports, AI, and intelligence workflows.
 
 Feature preservation is mandatory. Restyling must not remove actions, fields, filters, provenance, confidence, validation, auditability, keyboard shortcuts, or human confirmation steps.
 
@@ -486,11 +486,11 @@ Required shortcuts remain visible and functional:
 - Preview may use a light paper sheet within the dark workspace.
 - Export/copy actions stay visible and sticky.
 
-### 9.8 Safety and public intelligence
+### 9.8 Public intelligence
 
 - Preserve the same shell and typography.
-- SOS uses red only for the emergency action and dispatch status.
 - Credibility scores are framed as transparent triage factors, never truth scores.
+- Document ingestion and forensic image analysis are reachable through the AI assistant composer attachments, not standalone rail tools.
 
 ---
 
@@ -549,7 +549,7 @@ Before accepting any design change:
 
 1. Compare at 1440×1000 and 1920×1080.
 2. Verify board, graph, timeline, and anomalies.
-3. Open search, case switcher, ingestion, resolution, assistant, reports, image analysis, audit, safety, and public intel.
+3. Open search, case switcher, assistant (incl. ingest/image attachments), resolution, reports, audit, and public intel.
 4. Check empty, loading, populated, error, disabled, hover, focus, selected, and destructive states.
 5. Confirm no card z-fighting or thread detachment.
 6. Pan and zoom beyond the cork frame; no featureless black area may appear.
@@ -571,17 +571,16 @@ The following capabilities must remain reachable after any redesign:
 - entity inspector editing and provenance;
 - graph analytics, pathfinding, communities, and predictions;
 - timeline scrubber and before/after comparison;
-- anomaly review;
-- document ingestion and staged AI extraction;
+- anomaly review (radar scope + detail cards);
+- document ingestion and staged AI extraction via the assistant;
 - identity resolution and merge;
 - AI investigator assistant and transcript export;
 - report generation and export;
-- forensic image analysis and evidence staging;
+- forensic image analysis and evidence staging via the assistant;
 - global search;
 - case creation, switching, ranking, and deletion;
 - audit trail;
 - public intelligence triage;
-- safety contacts and SOS workflow;
 - case import/export;
 - undo/redo;
 - Neo4j status and offline inspection mode.
@@ -609,11 +608,10 @@ Browser client
 │   ├── assistant and reports
 │   ├── forensic image analysis
 │   ├── global search and audit
-│   └── safety and public intelligence
+│   └── public intelligence
 └── Local resilience
     ├── IndexedDB case mirror
     ├── append-only audit log
-    ├── safety contacts
     └── public intelligence submissions
 
 Next.js server
@@ -698,14 +696,13 @@ AI extraction, link prediction, image analysis, and public-intelligence promotio
 | graph | bottom view bar | board relationship context |
 | timeline | bottom view bar | timeline popover |
 | anomalies | bottom view bar | entity/anomaly links |
-| ingest | left rail | public intel promotion |
+| ingest | assistant composer | public intel promotion |
 | identity resolution | left rail | ingest follow-up |
 | assistant | left rail | quick action chips |
 | reports | left rail | assistant report actions |
-| image analysis | left rail | evidence workflow |
+| image analysis | assistant composer | evidence workflow |
 | audit | left rail/top bell | mutation receipts |
 | public intelligence | left rail | ingestion staging |
-| safety | left rail | audit receipt |
 | cases | top-left menu | overflow menu |
 | global search | top search | Cmd/Ctrl+K |
 | import/export/reset | overflow menu | rail export |

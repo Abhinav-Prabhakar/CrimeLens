@@ -3,12 +3,9 @@
 import React from 'react';
 import {
   Sparkles,
-  Upload,
   FileText,
   Users,
-  Camera,
   Inbox,
-  HeartHandshake,
   History,
 } from 'lucide-react';
 import { CasebookTopBar, type KebabItem } from './CasebookTopBar';
@@ -51,13 +48,10 @@ export interface CasebookChromeProps {
   onCenterBoard(): void;
   onResetSeed(): void;
   // app tools (rail)
-  onOpenIngest(): void;
   onOpenAssistant(): void;
   onOpenReports(): void;
   onOpenResolution(): void;
-  onOpenImageAnalysis(): void;
   onOpenIntel(): void;
-  onOpenSafety(): void;
 }
 
 const VIEW_LABELS: Record<AppView, string> = {
@@ -100,13 +94,10 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
     onImport,
     onCenterBoard,
     onResetSeed,
-    onOpenIngest,
     onOpenAssistant,
     onOpenReports,
     onOpenResolution,
-    onOpenImageAnalysis,
     onOpenIntel,
-    onOpenSafety,
   } = props;
 
   const kebabItems: KebabItem[] = [
@@ -118,13 +109,10 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
   ];
 
   const appTools: RailAppTool[] = [
-    { id: 'ingest', label: 'Ingest', icon: <Upload size={18} />, onSelect: onOpenIngest },
     { id: 'assistant', label: 'AI Assistant', icon: <Sparkles size={18} />, onSelect: onOpenAssistant },
     { id: 'reports', label: 'Reports', icon: <FileText size={18} />, onSelect: onOpenReports },
     { id: 'resolve', label: 'Resolution', icon: <Users size={18} />, onSelect: onOpenResolution },
-    { id: 'analyze', label: 'Analyze', icon: <Camera size={18} />, onSelect: onOpenImageAnalysis },
     { id: 'intel', label: 'Intel', icon: <Inbox size={18} />, onSelect: onOpenIntel },
-    { id: 'safety', label: 'Safety', icon: <HeartHandshake size={18} />, onSelect: onOpenSafety },
     { id: 'audit', label: 'Audit', icon: <History size={18} />, onSelect: onOpenAudit },
   ];
 

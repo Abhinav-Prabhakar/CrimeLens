@@ -20,6 +20,8 @@ import {
   Scale,
   GitFork,
   HelpCircle,
+  FileUp,
+  Camera,
 } from 'lucide-react';
 import { InvestigationCase, InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
 
@@ -30,6 +32,8 @@ interface AssistantDrawerProps {
   relationships: InvestigationRelationship[];
   onClose: () => void;
   onSelectEntity?: (id: string) => void;
+  onOpenIngest?: () => void;
+  onOpenImageAnalysis?: () => void;
 }
 
 interface ChatMessage {
@@ -55,7 +59,9 @@ I can assist you with:
 - **Financial Layering & Shell Account Tracing**
 - **Statutory Charge Drafting Assistance** (*Bharatiya Nyaya Sanhita / PMLA*)
 
-Select an action chip below or type your inquiry.`,
+Select an action chip below or type your inquiry.
+
+Attach a document or evidence image with the buttons beside the composer — extraction results stage for your review.`,
   timestamp: new Date().toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -77,6 +83,8 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
   relationships,
   onClose,
   onSelectEntity,
+  onOpenIngest,
+  onOpenImageAnalysis,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     introMessage(activeCase, entities, relationships),
@@ -262,6 +270,29 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
             {item.label}
           </button>
         ))}
+        {(onOpenIngest || onOpenImageAnalysis) && (
+          <span className="flex-shrink-0 self-center h-4 border-l border-noir-700 mx-0.5" aria-hidden="true" />
+        )}
+        {onOpenIngest && (
+          <button
+            onClick={onOpenIngest}
+            className="cb-btn cb-btn-ghost cb-btn-sm flex-shrink-0 whitespace-nowrap"
+            title="Attach document for extraction"
+          >
+            <FileUp className="w-3.5 h-3.5" />
+            Ingest document
+          </button>
+        )}
+        {onOpenImageAnalysis && (
+          <button
+            onClick={onOpenImageAnalysis}
+            className="cb-btn cb-btn-ghost cb-btn-sm flex-shrink-0 whitespace-nowrap"
+            title="Attach evidence image for forensic analysis"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            Analyze image
+          </button>
+        )}
       </div>
 
       {/* Chat Messages Log */}
@@ -366,6 +397,24 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
 
       {/* Input Field */}
       <div className="cb-dossier-foot p-3 flex items-center gap-2">
+        {onOpenIngest && (
+          <button
+            onClick={onOpenIngest}
+            className="cb-btn cb-btn-ghost cb-btn-icon flex-shrink-0"
+            title="Attach document for extraction"
+          >
+            <FileUp className="w-[18px] h-[18px]" />
+          </button>
+        )}
+        {onOpenImageAnalysis && (
+          <button
+            onClick={onOpenImageAnalysis}
+            className="cb-btn cb-btn-ghost cb-btn-icon flex-shrink-0"
+            title="Attach evidence image for forensic analysis"
+          >
+            <Camera className="w-[18px] h-[18px]" />
+          </button>
+        )}
         <input
           type="text"
           value={inputQuery}

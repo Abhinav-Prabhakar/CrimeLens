@@ -13,7 +13,6 @@ import { DocumentIngestModal } from '@/components/ingestion/DocumentIngestModal'
 import { EntityResolutionModal } from '@/components/resolution/EntityResolutionModal';
 import { InvestigatorAssistantDrawer } from '@/components/assistant/InvestigatorAssistantDrawer';
 import { CaseReportModal } from '@/components/reports/CaseReportModal';
-import { WomenSafetyModal } from '@/components/safety/WomenSafetyModal';
 import { PublicIntelModal } from '@/components/safety/PublicIntelModal';
 import { AnomalyPanel } from '@/components/temporal/AnomalyPanel';
 import { InvestigationTimelineView } from '@/components/temporal/InvestigationTimelineView';
@@ -85,7 +84,6 @@ export default function CrimeLensMainPage() {
   const [isResolutionOpen, setIsResolutionOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
-  const [isSafetyOpen, setIsSafetyOpen] = useState(false);
   const [isIntelOpen, setIsIntelOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCasesOpen, setIsCasesOpen] = useState(false);
@@ -123,7 +121,6 @@ export default function CrimeLensMainPage() {
           [isIngestOpen, () => setIsIngestOpen(false)],
           [isResolutionOpen, () => setIsResolutionOpen(false)],
           [isIntelOpen, () => setIsIntelOpen(false)],
-          [isSafetyOpen, () => setIsSafetyOpen(false)],
           [isReportsOpen, () => setIsReportsOpen(false)],
           [isAssistantOpen, () => setIsAssistantOpen(false)],
         ];
@@ -150,7 +147,7 @@ export default function CrimeLensMainPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTool, undo, redo, isSearchOpen, isCasesOpen, isAuditLogsOpen, isImageModalOpen, isIngestOpen, isResolutionOpen, isIntelOpen, isSafetyOpen, isReportsOpen, isAssistantOpen, setSelectedEntityId, setSelectedEntityIds]);
+  }, [setActiveTool, undo, redo, isSearchOpen, isCasesOpen, isAuditLogsOpen, isImageModalOpen, isIngestOpen, isResolutionOpen, isIntelOpen, isReportsOpen, isAssistantOpen, setSelectedEntityId, setSelectedEntityIds]);
 
   // Selected Entity
   const selectedEntity = entities.find((e) => e.id === selectedEntityId) || null;
@@ -354,16 +351,10 @@ export default function CrimeLensMainPage() {
         onImport={() => importFileRef.current?.click()}
         onCenterBoard={() => boardApiRef.current?.center()}
         onResetSeed={handleResetSeed}
-        onOpenIngest={() => {
-          setIngestPrefill(undefined);
-          setIsIngestOpen(true);
-        }}
         onOpenAssistant={() => setIsAssistantOpen(true)}
         onOpenReports={() => setIsReportsOpen(true)}
         onOpenResolution={() => setIsResolutionOpen(true)}
-        onOpenImageAnalysis={() => setIsImageModalOpen(true)}
         onOpenIntel={() => setIsIntelOpen(true)}
-        onOpenSafety={() => setIsSafetyOpen(true)}
       />
 
       <input
@@ -602,6 +593,11 @@ export default function CrimeLensMainPage() {
         entities={entities}
         relationships={relationships}
         onClose={() => setIsAssistantOpen(false)}
+        onOpenIngest={() => {
+          setIngestPrefill(undefined);
+          setIsIngestOpen(true);
+        }}
+        onOpenImageAnalysis={() => setIsImageModalOpen(true)}
       />
 
       {/* Case Reports & FIR Drafting Modal */}
@@ -613,15 +609,6 @@ export default function CrimeLensMainPage() {
         onClose={() => setIsReportsOpen(false)}
         onReportGenerated={(reportType) => {
           logCaseEvent('report_generated', 'case', activeCase?.id || 'case', `Generated ${reportType} report for ${activeCase?.caseNumber}`);
-        }}
-      />
-
-      {/* Women Safety Modal */}
-      <WomenSafetyModal
-        isOpen={isSafetyOpen}
-        onClose={() => setIsSafetyOpen(false)}
-        onSosDispatched={(details) => {
-          logCaseEvent('sos_dispatched', 'case', activeCase?.id || 'case', details);
         }}
       />
 

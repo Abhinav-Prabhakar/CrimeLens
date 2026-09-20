@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, FileText, Download, Copy, Check, Printer, Shield } from 'lucide-react';
 import { InvestigationCase, InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
+import { MarkdownView } from '@/components/ui/MarkdownView';
 
 interface CaseReportModalProps {
   isOpen: boolean;
@@ -212,9 +213,9 @@ ${relationships
 
         {/* Report Preview — typed case-file on aged paper */}
         <div className="cb-dossier-body cb-scroll flex-1 overflow-y-auto p-6">
-          <pre className="cb-paper-sheet p-5 text-[11px] font-mono leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
-            {reportText}
-          </pre>
+          <div className="cb-paper-sheet p-5 selection:bg-crimson selection:text-white">
+            <MarkdownView>{reportText}</MarkdownView>
+          </div>
         </div>
 
         {/* Footer Actions */}
