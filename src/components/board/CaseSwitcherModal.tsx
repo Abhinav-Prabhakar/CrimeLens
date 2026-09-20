@@ -16,6 +16,8 @@ interface CaseSwitcherModalProps {
   onDeleteCase: (caseId: string) => Promise<void>;
 }
 
+const NEW_CASE_FORM_ID = 'cb-new-case-form';
+
 export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
   isOpen,
   activeCaseId,
@@ -63,51 +65,54 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
   };
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier cb-case-dossier w-full max-w-2xl bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier cb-case-dossier w-full max-w-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
+        <div className="cb-dossier-head flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <FolderOpen className="w-5 h-5 text-crimson" />
+            <FolderOpen className="w-5 h-5 text-crimson flex-shrink-0" />
             <div>
-              <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
-                Investigation Cases & Prioritization Ranking
-              </h2>
-              <p className="text-[11px] text-noir-400">
+              <h2 className="text-sm font-bold">Investigation Cases & Prioritization Ranking</h2>
+              <p className="text-[11px] cb-dim">
                 Portfolio ranked live from the Neo4j graph by risk severity, network density, anomaly load and urgency.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon" title="Close case switcher">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="cb-dossier-body flex-1 p-6 space-y-5 overflow-y-auto max-h-[75vh]">
+        <div className="cb-dossier-body cb-scroll flex-1 p-5 space-y-5 overflow-y-auto max-h-[75vh]">
           {!isCreating ? (
             <>
               {/* Existing Cases List */}
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-noir-300 uppercase">
+                <span className="cb-eyebrow">
                   Available Cases ({ranked.length})
                 </span>
                 <button
                   onClick={() => setIsCreating(true)}
-                  className="px-3 py-1.5 bg-crimson hover:bg-crimson-bright text-white rounded font-bold flex items-center gap-1.5 transition-colors"
+                  className="cb-btn cb-btn-primary cb-btn-sm"
                 >
                   <Plus className="w-3.5 h-3.5" /> Initialize New Case
                 </button>
               </div>
 
-              <div className="space-y-3">
+              <div className="cb-list">
                 {ranked.map(({ caseItem: c, priority: score }) => (
                   <div
                     key={c.id}
-                    className={`p-4 rounded-xl border transition-all ${
+                    className="cb-card cb-card-pad"
+                    style={
                       activeCaseId === c.id
-                        ? 'bg-crimson/15 border-crimson shadow-md'
-                        : 'bg-noir-850 border-noir-700 hover:border-noir-500'
-                    }`}
+                        ? {
+                            borderColor: '#6e231c',
+                            background:
+                              'linear-gradient(145deg, rgba(70, 26, 20, 0.6), rgba(18, 12, 10, 0.92))',
+                          }
+                        : undefined
+                    }
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div
@@ -120,34 +125,30 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-bold text-sm text-noir-100">{c.title}</h3>
                           {activeCaseId === c.id && (
-                            <span className="px-2 py-0.5 bg-crimson text-white rounded text-[9px] font-bold">
-                              ACTIVE
-                            </span>
+                            <span className="cb-badge cb-badge-red">Active</span>
                           )}
-                          <span className="px-2 py-0.5 bg-noir-800 border border-noir-700 rounded text-[9px] font-bold text-amber-accent flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" /> PRIORITY {(score.score * 100).toFixed(0)}
+                          <span className="cb-badge cb-badge-amber">
+                            <TrendingUp className="w-3 h-3" /> Priority {(score.score * 100).toFixed(0)}
                           </span>
                         </div>
-                        <div className="text-[11px] text-noir-400 mt-0.5">
-                          {c.caseNumber} • Lead: {c.leadInvestigator} • {c.jurisdiction}
+                        <div className="cb-mono text-[10px] cb-dim mt-1">
+                          {c.caseNumber} · Lead: {c.leadInvestigator} · {c.jurisdiction}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            c.priority === 'critical'
-                              ? 'bg-crimson text-white'
-                              : c.priority === 'high'
-                              ? 'bg-crimson/20 text-crimson border border-crimson/40'
-                              : 'bg-amber-accent/20 text-amber-accent'
-                          }`}
+                          className={
+                            c.priority === 'critical' || c.priority === 'high'
+                              ? 'cb-badge cb-badge-red'
+                              : 'cb-badge cb-badge-amber'
+                          }
                         >
                           {c.priority}
                         </span>
                         <button
                           onClick={() => setExpandedCaseId(expandedCaseId === c.id ? null : c.id)}
-                          className="p-1.5 bg-noir-800 hover:bg-noir-700 text-noir-400 hover:text-noir-200 rounded transition-colors"
+                          className="cb-btn cb-btn-ghost cb-btn-icon cb-btn-sm"
                           title="Prioritization breakdown"
                         >
                           <BarChart3 className="w-3.5 h-3.5" />
@@ -163,7 +164,7 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                                 onDeleteCase(c.id);
                               }
                             }}
-                            className="p-1.5 bg-noir-800 hover:bg-crimson/20 text-noir-600 hover:text-crimson rounded transition-colors"
+                            className="cb-btn cb-btn-danger cb-btn-icon cb-btn-sm"
                             title="Delete case"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -172,60 +173,66 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-noir-300 mt-2 line-clamp-2">{c.description}</p>
+                    <p className="text-[11px] cb-dim mt-2 line-clamp-2">{c.description}</p>
 
                     {/* Graph summary chips */}
-                    <div className="flex items-center gap-3 mt-2 text-[10px] text-noir-500">
+                    <div className="flex items-center gap-3 mt-2 cb-mono text-[10px] cb-faint">
                       <span>{summaries.find((s) => s.caseItem.id === c.id)?.entityCount ?? 0} entities</span>
                       <span>{summaries.find((s) => s.caseItem.id === c.id)?.relationshipCount ?? 0} links</span>
-                      <span className="text-amber-accent/80">
+                      <span className="cb-amber">
                         {summaries.find((s) => s.caseItem.id === c.id)?.anomalyCount ?? 0} open anomalies
                       </span>
                     </div>
 
                     {/* Prioritization factor breakdown */}
                     {expandedCaseId === c.id && (
-                      <div className="mt-3 pt-3 border-t border-noir-700 space-y-1.5">
-                        {score.factors.map((f) => (
-                          <div key={f.label} className="flex items-center gap-2">
-                            <span className="w-32 text-[10px] uppercase text-noir-400 flex-shrink-0">{f.label}</span>
-                            <div className="flex-1 h-1.5 bg-noir-800 rounded overflow-hidden">
-                              <div
-                                className={`h-full rounded ${f.value > 0.6 ? 'bg-crimson' : f.value > 0.3 ? 'bg-amber-accent' : 'bg-cobalt'}`}
-                                style={{ width: `${Math.round(f.value * 100)}%` }}
-                              />
+                      <>
+                        <div className="cb-divider" />
+                        <div className="space-y-1.5">
+                          {score.factors.map((f) => (
+                            <div key={f.label} className="flex items-center gap-2">
+                              <span className="w-32 cb-mono text-[9px] uppercase cb-dim flex-shrink-0">{f.label}</span>
+                              <div className="cb-progress flex-1">
+                                <span
+                                  style={{
+                                    width: `${Math.round(f.value * 100)}%`,
+                                    background:
+                                      f.value > 0.6 ? '#e13c32' : f.value > 0.3 ? '#d9a520' : '#2f5f9e',
+                                  }}
+                                />
+                              </div>
+                              <span className="cb-mono text-[9px] cb-faint w-44 truncate text-right" title={f.detail}>
+                                {f.detail}
+                              </span>
                             </div>
-                            <span className="text-[9px] text-noir-500 w-44 truncate text-right" title={f.detail}>
-                              {f.detail}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-4 gap-3 pt-1">
                 <div className="cb-metric p-3">
                   <div className="cb-eyebrow">Cases</div>
-                  <div className="text-xl font-bold text-noir-100">{summaries.length}</div>
+                  <div className="text-xl font-bold text-noir-100 mt-1">{summaries.length}</div>
                 </div>
                 <div className="cb-metric p-3">
                   <div className="cb-eyebrow">Entities</div>
-                  <div className="text-xl font-bold text-noir-100">
+                  <div className="text-xl font-bold text-noir-100 mt-1">
                     {summaries.reduce((sum, item) => sum + item.entityCount, 0)}
                   </div>
                 </div>
                 <div className="cb-metric p-3">
                   <div className="cb-eyebrow">Links</div>
-                  <div className="text-xl font-bold text-noir-100">
+                  <div className="text-xl font-bold text-noir-100 mt-1">
                     {summaries.reduce((sum, item) => sum + item.relationshipCount, 0)}
                   </div>
                 </div>
                 <div className="cb-metric p-3">
                   <div className="cb-eyebrow">Open alerts</div>
-                  <div className="text-xl font-bold text-crimson">
+                  <div className="text-xl font-bold cb-red mt-1">
                     {summaries.reduce((sum, item) => sum + item.anomalyCount, 0)}
                   </div>
                 </div>
@@ -233,36 +240,36 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
             </>
           ) : (
             /* New Case Form */
-            <form onSubmit={handleCreateCase} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase text-noir-400">Investigation Title</label>
+            <form id={NEW_CASE_FORM_ID} onSubmit={handleCreateCase} className="space-y-4">
+              <div>
+                <label className="cb-field-label">Investigation Title</label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Operation Nightfall: Cyber Syndicate"
-                  className="w-full bg-noir-950 border border-noir-700 rounded px-3 py-2 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                  className="cb-input"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase text-noir-400">Case Reference Number</label>
+                <div>
+                  <label className="cb-field-label">Case Reference Number</label>
                   <input
                     type="text"
                     value={caseNumber}
                     onChange={(e) => setCaseNumber(e.target.value)}
                     placeholder="CR-2026-XXXX (auto if blank)"
-                    className="w-full bg-noir-950 border border-noir-700 rounded px-3 py-2 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                    className="cb-input"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase text-noir-400">Case Priority Ranking</label>
+                <div>
+                  <label className="cb-field-label">Case Priority Ranking</label>
                   <select
                     value={priority}
                     onChange={(e: any) => setPriority(e.target.value)}
-                    className="w-full bg-noir-950 border border-noir-700 rounded px-3 py-2 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                    className="cb-select"
                   >
                     <option value="critical">CRITICAL (Immediate Public Risk)</option>
                     <option value="high">HIGH (Active Organized Syndicate)</option>
@@ -273,67 +280,78 @@ export const CaseSwitcherModal: React.FC<CaseSwitcherModalProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase text-noir-400">Lead Officer / Team</label>
+                <div>
+                  <label className="cb-field-label">Lead Officer / Team</label>
                   <input
                     type="text"
                     value={leadInvestigator}
                     onChange={(e) => setLeadInvestigator(e.target.value)}
-                    className="w-full bg-noir-950 border border-noir-700 rounded px-3 py-2 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                    className="cb-input"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase text-noir-400">Jurisdiction / Agency</label>
+                <div>
+                  <label className="cb-field-label">Jurisdiction / Agency</label>
                   <input
                     type="text"
                     value={jurisdiction}
                     onChange={(e) => setJurisdiction(e.target.value)}
-                    className="w-full bg-noir-950 border border-noir-700 rounded px-3 py-2 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                    className="cb-input"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase text-noir-400">
+              <div>
+                <label className="cb-field-label">
                   Incident Date (anchors anomaly windows & timeline)
                 </label>
                 <input
                   type="date"
                   value={incidentDate}
                   onChange={(e) => setIncidentDate(e.target.value)}
-                  className="w-full bg-noir-950 border border-noir-700 rounded px-3 py-2 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                  className="cb-input"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase text-noir-400">Investigation Brief / Scope</label>
+              <div>
+                <label className="cb-field-label">Investigation Brief / Scope</label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Outline key allegations, incident overview, and intelligence goals..."
-                  className="w-full bg-noir-950 border border-noir-700 rounded p-2.5 text-noir-100 text-xs focus:border-crimson focus:outline-none"
+                  className="cb-textarea"
                 />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-noir-800">
-                <button
-                  type="button"
-                  onClick={() => setIsCreating(false)}
-                  className="px-4 py-2 text-noir-400 hover:text-noir-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-crimson hover:bg-crimson-bright text-white rounded font-bold transition-colors"
-                >
-                  Create Investigation
-                </button>
               </div>
             </form>
           )}
         </div>
+
+        {/* Sticky action footer */}
+        {isCreating ? (
+          <div className="cb-dossier-foot flex items-center justify-end gap-3 px-5 py-3">
+            <button
+              type="button"
+              onClick={() => setIsCreating(false)}
+              className="cb-btn cb-btn-ghost"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form={NEW_CASE_FORM_ID}
+              className="cb-btn cb-btn-primary"
+            >
+              Create Investigation
+            </button>
+          </div>
+        ) : (
+          <div className="cb-dossier-foot flex items-center justify-between px-5 py-2.5 cb-mono text-[10px] cb-faint">
+            <span>
+              {ranked.length} case dossier{ranked.length === 1 ? '' : 's'} ranked by composite priority
+            </span>
+            <span>Select a dossier to open it on the board</span>
+          </div>
+        )}
       </div>
     </div>
   );

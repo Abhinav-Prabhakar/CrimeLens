@@ -21,12 +21,12 @@ interface TimelineViewProps {
 }
 
 const CATEGORY_STYLES: Record<string, string> = {
-  incident: 'bg-crimson text-white',
-  communication: 'bg-amber-accent/20 text-amber-accent border border-amber-accent/40',
-  financial: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
-  forensic: 'bg-cobalt/20 text-cobalt border border-cobalt/40',
-  surveillance: 'bg-noir-800 text-noir-300',
-  document: 'bg-noir-800 text-noir-400 border border-noir-700',
+  incident: 'cb-badge cb-badge-red',
+  communication: 'cb-badge cb-badge-amber',
+  financial: 'cb-badge cb-badge-green',
+  forensic: 'cb-badge cb-badge-cobalt',
+  surveillance: 'cb-badge',
+  document: 'cb-badge',
 };
 
 export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
@@ -96,16 +96,31 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
   };
 
   return (
-    <div className="cb-workspace w-full h-full p-6 bg-noir-950 overflow-y-auto font-mono text-xs text-noir-200 space-y-6">
+    <div className="cb-workspace tl-view w-full h-full overflow-y-auto cb-scroll text-[11px] text-noir-200 flex flex-col gap-5">
+      {/* Scoped finish: spacing + the instrument-rail scrubber (margin/padding
+          utilities are reset inside .cb-scope, so spacing lives here). */}
+      <style>{`
+        .tl-view .cb-workspace-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;font-family:var(--mono);}
+        .tl-view .cb-select{width:auto;padding:5px 26px 5px 9px;font-family:var(--mono);font-size:11px;}
+        .tl-view .tl-pad{padding:14px 16px;}
+        .tl-view .tl-metric-pad{padding:10px 12px;}
+        .tl-view .tl-scrub{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:#2a2522;outline:none;cursor:pointer;}
+        .tl-view .tl-scrub::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:#e13c32;border:2px solid #0c0a09;box-shadow:0 0 0 1px #8c2620,0 0 10px rgba(225,60,50,0.4);cursor:pointer;}
+        .tl-view .tl-scrub::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:#e13c32;border:2px solid #0c0a09;box-shadow:0 0 0 1px #8c2620;cursor:pointer;}
+        .tl-view .cb-tab.tl-before.active{background:rgba(217,165,32,0.14);border-color:#6e5518;color:#e8c160;}
+        .tl-view .cb-tab.tl-after.active{background:rgba(47,95,158,0.18);border-color:#2f5f9e;color:#7fa6d8;}
+        .tl-view .tl-foot{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);}
+      `}</style>
+
       {/* Header & Controls Bar */}
-      <div className="cb-workspace-head flex flex-wrap items-center justify-between gap-4 border-b border-noir-700 p-4">
+      <div className="cb-workspace-head">
         <div className="flex items-center gap-3">
           <Clock className="w-5 h-5 text-amber-accent" />
           <div>
-            <h2 className="text-base font-bold text-noir-100 uppercase tracking-wider">
+            <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
               Investigation Chronology & Temporal Network Analysis
             </h2>
-            <p className="text-[11px] text-noir-400">
+            <p className="text-[11px] cb-dim">
               Derived live from {relationships.length} relationships, {documents.length} ingested documents and{' '}
               {timelineEvents.length} committed AI events
               {incidentDate ? ` (Incident Anchor: ${new Date(incidentDate).toLocaleString()})` : ' — no incident anchor set on this case'}.
@@ -113,61 +128,57 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
           </div>
         </div>
 
-        {/* Temporal Split Buttons */}
-        <div className="flex items-center gap-2 bg-noir-900 p-1 rounded-lg border border-noir-700">
-          <button
-            onClick={() => setTemporalFilter('all')}
-            className={`px-3 py-1 rounded font-bold transition-colors ${
-              temporalFilter === 'all' ? 'bg-crimson text-white' : 'text-noir-400 hover:text-noir-200'
-            }`}
-          >
-            Full Chronology ({events.length})
-          </button>
-          <button
-            onClick={() => setTemporalFilter('before')}
-            className={`px-3 py-1 rounded font-bold transition-colors ${
-              temporalFilter === 'before' ? 'bg-amber-accent text-noir-950' : 'text-noir-400 hover:text-noir-200'
-            }`}
-          >
-            Pre-Incident ({preCount})
-          </button>
-          <button
-            onClick={() => setTemporalFilter('after')}
-            className={`px-3 py-1 rounded font-bold transition-colors ${
-              temporalFilter === 'after' ? 'bg-cobalt text-white' : 'text-noir-400 hover:text-noir-200'
-            }`}
-          >
-            Post-Incident ({postCount})
-          </button>
-        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Temporal Split Tabs */}
+          <div className="cb-tabs">
+            <button
+              onClick={() => setTemporalFilter('all')}
+              className={`cb-tab ${temporalFilter === 'all' ? 'active' : ''}`}
+            >
+              Full Chronology ({events.length})
+            </button>
+            <button
+              onClick={() => setTemporalFilter('before')}
+              className={`cb-tab tl-before ${temporalFilter === 'before' ? 'active' : ''}`}
+            >
+              Pre-Incident ({preCount})
+            </button>
+            <button
+              onClick={() => setTemporalFilter('after')}
+              className={`cb-tab tl-after ${temporalFilter === 'after' ? 'active' : ''}`}
+            >
+              Post-Incident ({postCount})
+            </button>
+          </div>
 
-        {/* Category Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5 text-noir-400" />
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-noir-900 border border-noir-700 rounded px-2.5 py-1 text-noir-200 focus:outline-none"
-          >
-            <option value="all">All Event Categories</option>
-            <option value="incident">Crime Incidents</option>
-            <option value="communication">Communications</option>
-            <option value="financial">Financial Transfers</option>
-            <option value="surveillance">Surveillance & Movement</option>
-            <option value="forensic">Forensic Recoveries</option>
-            <option value="document">Document Ingestion</option>
-          </select>
+          {/* Category Filter */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 cb-faint" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="cb-select"
+            >
+              <option value="all">All Event Categories</option>
+              <option value="incident">Crime Incidents</option>
+              <option value="communication">Communications</option>
+              <option value="financial">Financial Transfers</option>
+              <option value="surveillance">Surveillance & Movement</option>
+              <option value="forensic">Forensic Recoveries</option>
+              <option value="document">Document Ingestion</option>
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Temporal Scrubber — network evolution at any point in time */}
       {timeBounds && (
-        <div className="p-4 bg-noir-900/90 border border-noir-700 rounded-xl space-y-3">
+        <div className="cb-card tl-pad flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <span className="font-bold text-noir-100 uppercase flex items-center gap-1.5">
+            <span className="cb-eyebrow flex items-center gap-1.5">
               <Activity className="w-4 h-4 text-crimson" /> Temporal Network Scrubber
             </span>
-            <span className="text-[11px] text-noir-400">
+            <span className="text-[11px] cb-dim cb-mono">
               As of <strong className="text-noir-100">{scrubTime ? new Date(scrubTime).toLocaleString() : '—'}</strong>
             </span>
           </div>
@@ -178,37 +189,37 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
             step={0.001}
             value={scrubRatio}
             onChange={(e) => scrubChange(parseFloat(e.target.value))}
-            className="w-full accent-crimson cursor-pointer"
+            className="tl-scrub"
           />
-          <div className="flex items-center justify-between text-[10px] text-noir-500">
+          <div className="flex items-center justify-between text-[10px] cb-faint cb-mono">
             <span>{new Date(timeBounds.min).toLocaleString()}</span>
             <span>{new Date(timeBounds.max).toLocaleString()}</span>
           </div>
           {scrubState && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
-              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
-                <div className="text-[9px] uppercase text-noir-500">Active Nodes</div>
-                <div className="text-lg font-bold text-noir-100">{scrubState.activeEntityIds.length}</div>
-                <div className="text-[9px] text-noir-600">of {entities.length} total</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="cb-metric tl-metric-pad">
+                <div className="cb-eyebrow">Active Nodes</div>
+                <div className="text-lg font-bold text-noir-100 cb-mono">{scrubState.activeEntityIds.length}</div>
+                <div className="text-[9px] cb-faint">of {entities.length} total</div>
               </div>
-              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
-                <div className="text-[9px] uppercase text-noir-500">Active Edges</div>
-                <div className="text-lg font-bold text-noir-100">{scrubState.activeRelationshipIds.length}</div>
-                <div className="text-[9px] text-noir-600">of {relationships.length} total</div>
+              <div className="cb-metric tl-metric-pad">
+                <div className="cb-eyebrow">Active Edges</div>
+                <div className="text-lg font-bold text-noir-100 cb-mono">{scrubState.activeRelationshipIds.length}</div>
+                <div className="text-[9px] cb-faint">of {relationships.length} total</div>
               </div>
-              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
-                <div className="text-[9px] uppercase text-noir-500">Dominant Hub</div>
+              <div className="cb-metric tl-metric-pad">
+                <div className="cb-eyebrow">Dominant Hub</div>
                 <div className="text-sm font-bold text-amber-accent truncate">{scrubState.dominantHubLabel || '—'}</div>
-                <div className="text-[9px] text-noir-600">{scrubState.dominantHubDegree} connections</div>
+                <div className="text-[9px] cb-faint">{scrubState.dominantHubDegree} connections</div>
               </div>
-              <div className="p-2.5 bg-noir-950 rounded border border-noir-800">
-                <div className="text-[9px] uppercase text-noir-500">Graph Density Signal</div>
-                <div className="text-lg font-bold text-noir-100">
+              <div className="cb-metric tl-metric-pad">
+                <div className="cb-eyebrow">Graph Density Signal</div>
+                <div className="text-lg font-bold text-noir-100 cb-mono">
                   {entities.length > 1
                     ? ((2 * scrubState.activeRelationshipIds.length) / (scrubState.activeEntityIds.length * (scrubState.activeEntityIds.length - 1) || 1)).toFixed(2)
                     : '0.00'}
                 </div>
-                <div className="text-[9px] text-noir-600">edges / possible pairs</div>
+                <div className="text-[9px] cb-faint">edges / possible pairs</div>
               </div>
             </div>
           )}
@@ -217,19 +228,19 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
 
       {/* Before / After Comparison Summary Cards — computed from the filtered graph */}
       {comparison && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono">
-          <div className="p-4 bg-noir-900/90 border border-amber-accent/30 rounded-xl space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="cb-card tl-pad flex flex-col gap-2" style={{ borderColor: 'rgba(217,165,32,0.45)' }}>
             <div className="flex items-center justify-between">
-              <span className="font-bold text-amber-accent flex items-center gap-1.5 uppercase">
-                <Calendar className="w-4 h-4" /> PHASE 1: PRE-INCIDENT NETWORK
+              <span className="cb-eyebrow cb-amber flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" /> Phase 1: Pre-Incident Network
               </span>
-              <span className="text-[10px] text-noir-400">90 days before anchor</span>
+              <span className="cb-badge cb-badge-amber">90 days before anchor</span>
             </div>
             <p className="text-noir-300 text-[11px] leading-relaxed">
               {comparison.before.relationshipCount} evidential link(s) recorded across{' '}
               {comparison.before.entityCount} active entities in the preparation window.
             </p>
-            <div className="text-[10px] text-amber-accent font-bold">
+            <div className="text-[10px] cb-amber font-bold cb-mono">
               Key Hub:{' '}
               <span className="text-noir-100">
                 {comparison.before.dominantHubLabel
@@ -237,23 +248,23 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
                   : 'None emerged yet'}
               </span>
             </div>
-            <div className="text-[10px] text-noir-400">
+            <div className="text-[10px] cb-dim cb-mono">
               Dominant activity: {comparison.before.topCategories.map((c) => `${c.category} ×${c.count}`).join(' · ') || '—'}
             </div>
           </div>
 
-          <div className="p-4 bg-noir-900/90 border border-cobalt/40 rounded-xl space-y-2">
+          <div className="cb-card tl-pad flex flex-col gap-2" style={{ borderColor: 'rgba(47,95,158,0.55)' }}>
             <div className="flex items-center justify-between">
-              <span className="font-bold text-cobalt flex items-center gap-1.5 uppercase">
-                <Calendar className="w-4 h-4" /> PHASE 2: POST-INCIDENT NETWORK
+              <span className="cb-eyebrow cb-cobalt flex items-center gap-1.5">
+                <Calendar className="w-4 h-4" /> Phase 2: Post-Incident Network
               </span>
-              <span className="text-[10px] text-noir-400">90 days after anchor</span>
+              <span className="cb-badge cb-badge-cobalt">90 days after anchor</span>
             </div>
             <p className="text-noir-300 text-[11px] leading-relaxed">
               {comparison.after.relationshipCount} evidential link(s) recorded across{' '}
               {comparison.after.entityCount} active entities in the breach & liquidation window.
             </p>
-            <div className="text-[10px] text-cobalt font-bold">
+            <div className="text-[10px] cb-cobalt font-bold cb-mono">
               Key Hub:{' '}
               <span className="text-noir-100">
                 {comparison.after.dominantHubLabel
@@ -261,7 +272,7 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
                   : 'None recorded'}
               </span>
             </div>
-            <div className="text-[10px] text-noir-400">
+            <div className="text-[10px] cb-dim cb-mono">
               Dominant activity: {comparison.after.topCategories.map((c) => `${c.category} ×${c.count}`).join(' · ') || '—'}
             </div>
           </div>
@@ -270,16 +281,18 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
 
       {/* Chronological Timeline Stream */}
       {filteredEvents.length === 0 ? (
-        <div className="py-16 text-center text-noir-400 space-y-2">
-          <Clock className="w-10 h-10 mx-auto text-noir-600" />
+        <div className="cb-empty">
+          <div className="cb-empty-icon">
+            <Clock className="w-5 h-5" />
+          </div>
           <p className="font-bold text-noir-200">No chronology events match the current filters.</p>
-          <p className="text-[11px]">
+          <p className="text-[11px] cb-dim max-w-lg">
             Events derive from relationship timestamps (validFrom / provenance), ingested documents and the case
             incident anchor. Ingest evidence or set relationship dates to populate the chronology.
           </p>
         </div>
       ) : (
-        <div className="relative pl-6 border-l-2 border-noir-800 space-y-6">
+        <div className="relative border-l-2 border-noir-700 flex flex-col gap-5" style={{ paddingLeft: 24 }}>
           {filteredEvents.map((ev) => {
             const isAnchor = ev.source === 'incident_anchor';
             const isPost = incidentTime !== null && new Date(ev.timestamp).getTime() > incidentTime;
@@ -288,9 +301,9 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
               <div key={ev.id} className={`relative group transition-opacity ${isFuture ? 'opacity-40' : ''}`}>
                 {/* Timeline Bullet Node */}
                 <div
-                  className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 ${
                     isAnchor
-                      ? 'bg-crimson border-white ring-4 ring-crimson/30 animate-pulse'
+                      ? 'bg-crimson border-noir-100 ring-4 ring-crimson/30 animate-pulse'
                       : isPost
                       ? 'bg-cobalt border-noir-950'
                       : 'bg-amber-accent border-noir-950'
@@ -298,37 +311,40 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
                 />
 
                 <div
-                  className={`p-4 rounded-xl border transition-all ${
+                  className="cb-card tl-pad transition-colors"
+                  style={
                     isAnchor
-                      ? 'bg-crimson/15 border-crimson/50 shadow-lg shadow-crimson/10'
-                      : 'bg-noir-900/80 border-noir-700 hover:border-noir-600'
-                  }`}
+                      ? {
+                          borderColor: 'rgba(225,60,50,0.55)',
+                          background: 'linear-gradient(145deg, rgba(58,20,16,0.9), rgba(20,12,10,0.92))',
+                          boxShadow: '0 8px 28px rgba(225,60,50,0.10)',
+                        }
+                      : undefined
+                  }
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${CATEGORY_STYLES[ev.category] || CATEGORY_STYLES.surveillance}`}>
+                      <span className={CATEGORY_STYLES[ev.category] || CATEGORY_STYLES.surveillance}>
                         {ev.category}
                       </span>
                       <h3 className="font-bold text-sm text-noir-100">{ev.title}</h3>
                       {ev.source === 'ai_extraction' && (
-                        <span className="px-1.5 py-0.5 bg-amber-accent/15 border border-amber-accent/30 text-amber-accent rounded text-[9px] font-bold">
-                          AI-EXTRACTED
-                        </span>
+                        <span className="cb-badge cb-badge-amber">AI-Extracted</span>
                       )}
                     </div>
 
-                    <span className="text-[11px] text-noir-400 flex items-center gap-1 font-mono">
+                    <span className="text-[11px] cb-dim cb-mono flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
                       {new Date(ev.timestamp).toLocaleString()}
                     </span>
                   </div>
 
-                  <p className="text-noir-300 text-[11px] mt-2 leading-relaxed">{ev.description}</p>
+                  <p className="text-noir-300 text-[11px] leading-relaxed" style={{ marginTop: 8 }}>{ev.description}</p>
 
                   {/* Involved Entities Pills */}
                   {ev.involvedEntityIds.length > 0 && (
-                    <div className="flex items-center gap-2 mt-3 pt-2 border-t border-noir-800">
-                      <span className="text-[10px] text-noir-500 uppercase">Involved Entities:</span>
+                    <div className="tl-foot">
+                      <span className="cb-eyebrow">Involved:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {ev.involvedEntityIds.map((id) => {
                           const ent = entities.find((e) => e.id === id);
@@ -336,7 +352,7 @@ export const InvestigationTimelineView: React.FC<TimelineViewProps> = ({
                             <button
                               key={id}
                               onClick={() => onSelectEntity(id)}
-                              className="px-2 py-0.5 bg-noir-800 hover:bg-noir-700 text-noir-200 hover:text-white rounded text-[10px] transition-colors"
+                              className="cb-btn cb-btn-ghost cb-btn-sm"
                             >
                               {ent?.label || id}
                             </button>

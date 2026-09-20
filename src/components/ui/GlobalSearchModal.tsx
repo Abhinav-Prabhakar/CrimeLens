@@ -81,31 +81,44 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
   const totalResults = entityMatches.length + relMatches.length + docMatches.length;
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-start justify-center bg-black/80 backdrop-blur-sm pt-20 p-4">
-      <div className="cb-dossier cb-search-dossier w-full max-w-2xl bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
-        {/* Search Input Bar */}
-        <div className="cb-dossier-head flex items-center px-4 py-3 bg-noir-850 border-b border-noir-700 gap-3">
-          <Search className="w-5 h-5 text-crimson flex-shrink-0" />
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
+      <div className="cb-dossier cb-search-dossier w-full max-w-2xl flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="cb-dossier-head flex items-center justify-between px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <Search className="w-5 h-5 text-crimson flex-shrink-0" />
+            <div>
+              <h2 className="text-sm font-bold">Global Search</h2>
+              <p className="text-[11px] cb-dim">
+                Query entities, connections and ingested documents across the active case file.
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon" title="Close search">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Query strip */}
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-noir-700">
+          <Search className="w-4 h-4 cb-faint flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search suspects, connections, phone numbers, plates, documents..."
-            className="w-full bg-transparent text-sm text-noir-100 placeholder:text-noir-500 focus:outline-none"
+            className="cb-input"
           />
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Results List */}
-        <div className="cb-dossier-body flex-1 max-h-96 overflow-y-auto divide-y divide-noir-800 p-2">
+        <div className="cb-dossier-body cb-scroll flex-1 max-h-96 overflow-y-auto p-3">
           {!q ? (
-            <div className="p-6 space-y-5">
+            <div className="p-4 space-y-5">
               <div className="text-center space-y-1">
                 <div className="cb-eyebrow">Search the current dossier</div>
-                <p className="text-noir-400">
+                <p className="text-[11px] cb-dim">
                   Find evidence by designation, alias, phone, plate, predicate, document text, or investigator note.
                 </p>
               </div>
@@ -113,17 +126,17 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                 <div className="cb-metric p-3 text-center">
                   <User className="w-4 h-4 mx-auto mb-2 text-crimson" />
                   <div className="text-lg font-bold text-noir-100">{entities.length}</div>
-                  <div className="cb-eyebrow">Entities</div>
+                  <div className="cb-eyebrow mt-1">Entities</div>
                 </div>
                 <div className="cb-metric p-3 text-center">
                   <LinkIcon className="w-4 h-4 mx-auto mb-2 text-amber-accent" />
                   <div className="text-lg font-bold text-noir-100">{relationships.length}</div>
-                  <div className="cb-eyebrow">Connections</div>
+                  <div className="cb-eyebrow mt-1">Connections</div>
                 </div>
                 <div className="cb-metric p-3 text-center">
                   <FileText className="w-4 h-4 mx-auto mb-2 text-cobalt" />
                   <div className="text-lg font-bold text-noir-100">{documents.length}</div>
-                  <div className="cb-eyebrow">Documents</div>
+                  <div className="cb-eyebrow mt-1">Documents</div>
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2">
@@ -131,7 +144,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                   <button
                     key={term}
                     onClick={() => setQuery(term)}
-                    className="px-2.5 py-1 bg-noir-850 border border-noir-700 rounded text-noir-300 hover:text-noir-100 hover:border-noir-500"
+                    className="cb-btn cb-btn-ghost cb-btn-sm"
                   >
                     {term}
                   </button>
@@ -139,25 +152,30 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
               </div>
             </div>
           ) : totalResults === 0 ? (
-            <div className="p-8 text-center text-noir-400">
-              No investigative records match &ldquo;{query}&rdquo;.
+            <div className="cb-empty">
+              <div className="cb-empty-icon">
+                <Search className="w-5 h-5" />
+              </div>
+              <p className="text-xs cb-dim">
+                No investigative records match &ldquo;{query}&rdquo;.
+              </p>
             </div>
           ) : (
             <>
               {entityMatches.length > 0 && (
-                <div className="pb-1">
-                  <div className="px-2 py-1 text-[9px] uppercase text-noir-500 font-bold">Entities ({entityMatches.length})</div>
-                  {entityMatches.map((e) => (
-                    <div
-                      key={e.id}
-                      onClick={() => {
-                        onSelectEntity(e.id);
-                        onClose();
-                      }}
-                      className="p-3 hover:bg-noir-850 rounded-lg cursor-pointer flex items-center justify-between transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-noir-800 flex items-center justify-center text-noir-300 group-hover:text-crimson">
+                <div className="pb-2">
+                  <div className="cb-eyebrow px-1.5 py-1.5">Entities ({entityMatches.length})</div>
+                  <div className="cb-list">
+                    {entityMatches.map((e) => (
+                      <div
+                        key={e.id}
+                        onClick={() => {
+                          onSelectEntity(e.id);
+                          onClose();
+                        }}
+                        className="cb-row group"
+                      >
+                        <div className="cb-row-icon group-hover:text-crimson group-hover:border-crimson-dim">
                           {e.type === 'person' && <User className="w-4 h-4" />}
                           {e.type === 'phone' && <Phone className="w-4 h-4" />}
                           {e.type === 'location' && <MapPin className="w-4 h-4" />}
@@ -167,94 +185,100 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({
                             <FileText className="w-4 h-4" />
                           )}
                         </div>
-                        <div>
-                          <div className="font-bold text-noir-100 text-sm">{e.label}</div>
-                          <div className="text-[10px] text-noir-400">
-                            Type: <span className="uppercase text-noir-300">{e.type}</span> • Card:{' '}
-                            <span className="uppercase text-noir-300">{e.visualType}</span>
-                            {e.aliases.length > 0 && ` • Aka: ${e.aliases.join(', ')}`}
-                          </div>
+                        <div className="cb-row-main">
+                          <span className="cb-row-title">{e.label}</span>
+                          <span className="cb-row-sub">
+                            Type: <span className="uppercase cb-dim">{e.type}</span> · Card:{' '}
+                            <span className="uppercase cb-dim">{e.visualType}</span>
+                            {e.aliases.length > 0 && ` · Aka: ${e.aliases.join(', ')}`}
+                          </span>
                         </div>
+                        <ArrowRight className="w-3.5 h-3.5 cb-faint group-hover:text-noir-200 flex-shrink-0" />
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-noir-600 group-hover:text-noir-200" />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
               {relMatches.length > 0 && (
-                <div className="pb-1">
-                  <div className="px-2 py-1 text-[9px] uppercase text-noir-500 font-bold">
+                <div className="pb-2">
+                  <div className="cb-eyebrow px-1.5 py-1.5">
                     Connections ({relMatches.length})
                   </div>
-                  {relMatches.slice(0, 12).map((r) => (
-                    <div
-                      key={r.id}
-                      onClick={() => {
-                        onSelectEntity(r.sourceId);
-                        onClose();
-                      }}
-                      className="p-2.5 hover:bg-noir-850 rounded-lg cursor-pointer flex items-center justify-between transition-colors group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded bg-noir-800 flex items-center justify-center text-noir-300 group-hover:text-crimson">
+                  <div className="cb-list">
+                    {relMatches.slice(0, 12).map((r) => (
+                      <div
+                        key={r.id}
+                        onClick={() => {
+                          onSelectEntity(r.sourceId);
+                          onClose();
+                        }}
+                        className="cb-row group"
+                      >
+                        <div className="cb-row-icon group-hover:text-crimson group-hover:border-crimson-dim">
                           <LinkIcon className="w-3.5 h-3.5" />
                         </div>
-                        <div className="text-[11px] text-noir-200">
-                          <strong>{labelById.get(r.sourceId) || r.sourceId}</strong> ──[
-                          <span className="text-crimson font-bold">{r.predicate}</span>]──►{' '}
-                          <strong>{labelById.get(r.targetId) || r.targetId}</strong>
-                          <span className="text-noir-500"> · {(r.confidence * 100).toFixed(0)}% · {r.status}</span>
+                        <div className="cb-row-main">
+                          <span className="cb-row-title">
+                            {labelById.get(r.sourceId) || r.sourceId} ──[
+                            <span className="cb-red font-bold">{r.predicate}</span>]──►{' '}
+                            {labelById.get(r.targetId) || r.targetId}
+                          </span>
+                          <span className="cb-row-sub">
+                            {(r.confidence * 100).toFixed(0)}% confidence · {r.status}
+                          </span>
                         </div>
+                        <ArrowRight className="w-3.5 h-3.5 cb-faint group-hover:text-noir-200 flex-shrink-0" />
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-noir-600 group-hover:text-noir-200" />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
               {docMatches.length > 0 && (
-                <div className="pb-1">
-                  <div className="px-2 py-1 text-[9px] uppercase text-noir-500 font-bold">
+                <div className="pb-2">
+                  <div className="cb-eyebrow px-1.5 py-1.5">
                     Ingested Documents ({docMatches.length})
                   </div>
-                  {docMatches.slice(0, 8).map((d) => (
-                    <div
-                      key={d.id}
-                      className="p-2.5 hover:bg-noir-850 rounded-lg cursor-pointer flex items-center justify-between transition-colors group"
-                      onClick={() => {
-                        // Documents have no board card; surface the first entity it produced if any
-                        onClose();
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 rounded bg-noir-800 flex items-center justify-center text-noir-300 group-hover:text-amber-accent">
+                  <div className="cb-list">
+                    {docMatches.slice(0, 8).map((d) => (
+                      <div
+                        key={d.id}
+                        className="cb-row group"
+                        onClick={() => {
+                          // Documents have no board card; surface the first entity it produced if any
+                          onClose();
+                        }}
+                      >
+                        <div className="cb-row-icon group-hover:text-amber-accent">
                           <FileText className="w-3.5 h-3.5" />
                         </div>
-                        <div>
-                          <div className="font-bold text-noir-100 text-[11px]">{d.title}</div>
-                          <div className="text-[10px] text-noir-500 flex items-center gap-1">
+                        <div className="cb-row-main">
+                          <span className="cb-row-title">{d.title}</span>
+                          <span className="cb-row-sub flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {new Date(d.importedAt).toLocaleString()} • {d.documentType.toUpperCase()} •{' '}
+                            {new Date(d.importedAt).toLocaleString()} · {d.documentType.toUpperCase()} ·{' '}
                             {d.extractedEntitiesCount || 0} entities staged
-                          </div>
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </>
           )}
         </div>
 
-        <div className="cb-dossier-foot px-4 py-2 bg-noir-950 border-t border-noir-800 text-[10px] text-noir-500 flex justify-between">
+        <div className="cb-dossier-foot flex items-center justify-between px-4 py-2.5 cb-mono text-[10px] cb-faint">
           <span>
             {q
               ? `${totalResults} records matched across entities, connections and documents`
               : `${entities.length} entities · ${relationships.length} connections · ${documents.length} documents indexed`}
           </span>
-          <span>Press ESC to close</span>
+          <span>
+            Press <span className="cb-kbd">ESC</span> to close
+          </span>
         </div>
       </div>
     </div>

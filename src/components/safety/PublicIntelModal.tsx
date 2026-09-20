@@ -85,61 +85,65 @@ export const PublicIntelModal: React.FC<PublicIntelModalProps> = ({
   };
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier w-full max-w-3xl max-h-[85vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
-          <div className="flex items-center gap-2.5">
-            <Inbox className="w-5 h-5 text-amber-accent" />
+        <div className="cb-dossier-head flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Inbox className="w-5 h-5 text-amber-accent flex-none" />
             <div>
+              <div className="cb-eyebrow">Citizen Tip Intake</div>
               <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
                 Public Intelligence & Anonymous Tip Intake
               </h2>
-              <p className="text-[11px] text-noir-400">
+              <p className="text-[11px] cb-dim mt-0.5">
                 Citizen tips, witness submissions, and credibility triage. Tips do not enter the graph without
                 investigator triage. Persisted locally in IndexedDB.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon flex-none" title="Close">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="cb-dossier-body cb-scroll flex-1 overflow-y-auto p-6 space-y-6">
           {/* Submit a New Tip Form */}
-          <form onSubmit={handleSubmit} className="p-4 bg-noir-850 rounded-xl border border-noir-700 space-y-3">
-            <h3 className="font-bold text-noir-100 uppercase text-[11px]">Submit Intelligence Tip</h3>
+          <form onSubmit={handleSubmit} className="cb-card cb-card-pad space-y-3">
+            <h3 className="cb-eyebrow">Submit Intelligence Tip</h3>
             <textarea
               rows={3}
               value={newTip}
               onChange={(e) => setNewTip(e.target.value)}
               placeholder="Describe observation, suspect sighting, vehicle movement, or overheard conversation..."
-              className="w-full bg-noir-950 border border-noir-700 rounded p-2.5 text-noir-100 text-[11px] focus:border-crimson focus:outline-none"
+              className="cb-textarea"
             />
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <input
                 type="text"
                 value={newLocation}
                 onChange={(e) => setNewLocation(e.target.value)}
                 placeholder="Specific Location / Landmark"
-                className="flex-1 bg-noir-950 border border-noir-700 rounded px-2.5 py-1.5 text-noir-100 text-[11px] focus:border-crimson focus:outline-none"
+                className="cb-input flex-1 min-w-[180px]"
               />
-              <select
-                value={sourceCategory}
-                onChange={(e: any) => setSourceCategory(e.target.value)}
-                className="bg-noir-950 border border-noir-700 rounded px-2.5 py-1.5 text-noir-100 text-[11px] focus:outline-none"
-              >
-                <option value="anonymous_tip">Anonymous Tip</option>
-                <option value="witness_portal">Witness Portal (semi-identified)</option>
-                <option value="hotline">Hotline Call</option>
-              </select>
+              <div className="w-56 flex-none">
+                <select
+                  value={sourceCategory}
+                  onChange={(e: any) => setSourceCategory(e.target.value)}
+                  className="cb-select"
+                >
+                  <option value="anonymous_tip">Anonymous Tip</option>
+                  <option value="witness_portal">Witness Portal (semi-identified)</option>
+                  <option value="hotline">Hotline Call</option>
+                </select>
+              </div>
               <button
                 type="submit"
                 disabled={isSubmitting || !newTip.trim()}
-                className="px-4 py-1.5 bg-crimson hover:bg-crimson-bright disabled:opacity-40 text-white rounded font-bold transition-colors"
+                className="cb-btn cb-btn-primary cb-btn-sm flex-none"
               >
+                <Send className="w-3.5 h-3.5" />
                 {isSubmitting ? 'Recording...' : 'Submit Lead'}
               </button>
             </div>
@@ -147,13 +151,13 @@ export const PublicIntelModal: React.FC<PublicIntelModalProps> = ({
 
           {/* Pending Submissions Queue */}
           <div className="space-y-3">
-            <h3 className="font-bold text-noir-100 uppercase">Tip Queue ({submissions.length})</h3>
+            <h3 className="cb-eyebrow">Tip Queue ({submissions.length})</h3>
             {submissions.length === 0 ? (
-              <div className="py-8 text-center text-noir-500 text-[11px]">
+              <div className="cb-empty border border-dashed border-noir-700 rounded-md">
                 No intelligence submissions recorded yet.
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="cb-list">
                 {submissions.map((sub) => {
                   const assessment = scoreTipCredibility(sub.content, {
                     sourceCategory: sub.sourceCategory,
@@ -161,67 +165,67 @@ export const PublicIntelModal: React.FC<PublicIntelModalProps> = ({
                     knownEntities: caseEntities,
                   });
                   return (
-                    <div key={sub.id} className="p-3 bg-noir-950 rounded-lg border border-noir-800 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-noir-400">
+                    <div key={sub.id} className="cb-card cb-card-pad space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="cb-faint cb-mono text-[10px]">
                           {new Date(sub.submittedAt).toLocaleString()} • {sub.sourceCategory.replace('_', ' ').toUpperCase()}
                         </span>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`cb-badge ${
                               sub.status === 'verified_lead'
-                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                ? 'cb-badge-green'
                                 : sub.status === 'dismissed_spam'
-                                ? 'bg-noir-800 text-noir-500 border border-noir-700 line-through'
-                                : 'bg-amber-accent/20 text-amber-accent'
+                                ? 'line-through'
+                                : 'cb-badge-amber'
                             }`}
                           >
-                            {(sub.credibilityScore * 100).toFixed(0)}% CREDIBILITY • {sub.status.toUpperCase()}
+                            {(sub.credibilityScore * 100).toFixed(0)}% Credibility • {sub.status.replace(/_/g, ' ')}
                           </span>
                           <button
                             onClick={() => handleDelete(sub.id)}
-                            className="p-1 text-noir-600 hover:text-crimson transition-colors"
+                            className="cb-btn cb-btn-ghost cb-btn-icon cb-btn-sm"
                             title="Delete submission"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
-                      <p className="text-noir-200 text-[11px] leading-relaxed">&ldquo;{sub.content}&rdquo;</p>
+                      <p className="text-noir-200 text-[12px] leading-relaxed">&ldquo;{sub.content}&rdquo;</p>
                       {sub.locationMentioned && (
-                        <div className="text-[10px] text-noir-400">
+                        <div className="text-[10px] cb-faint cb-mono uppercase tracking-wider">
                           Mentioned Location: <strong className="text-noir-200">{sub.locationMentioned}</strong>
                         </div>
                       )}
 
                       {/* Transparent credibility factor breakdown */}
                       <details className="group">
-                        <summary className="text-[10px] text-noir-500 hover:text-noir-300 cursor-pointer flex items-center gap-1 list-none">
+                        <summary className="text-[10px] text-noir-500 hover:text-noir-300 cursor-pointer flex items-center gap-1 list-none cb-mono uppercase tracking-wider">
                           <Gauge className="w-3 h-3" /> Credibility factors ({assessment.factors.length})
                         </summary>
                         <ul className="mt-1 space-y-0.5 pl-4">
                           {assessment.factors.map((f, i) => (
-                            <li key={i} className="text-[10px] text-noir-400">
+                            <li key={i} className="text-[10px] cb-dim cb-mono">
                               {f.points > 0 ? '+' : '•'} {f.label}
-                              {f.points > 0 && <span className="text-emerald-500"> (+{f.points.toFixed(2)})</span>}
+                              {f.points > 0 && <span className="cb-green"> (+{f.points.toFixed(2)})</span>}
                             </li>
                           ))}
                         </ul>
                       </details>
 
                       {sub.investigatorNotes && (
-                        <div className="text-[10px] text-noir-400 italic border-l-2 border-noir-700 pl-2">
+                        <div className="text-[10px] cb-dim italic border-l-2 border-noir-700 pl-2">
                           {sub.investigatorNotes}
                         </div>
                       )}
 
                       {/* Triage actions */}
-                      <div className="pt-2 border-t border-noir-800 flex items-center justify-between">
+                      <div className="pt-2.5 border-t border-noir-700 flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex gap-1.5">
                           {sub.status !== 'verified_lead' && (
                             <button
                               onClick={() => handleTriage(sub, 'verified_lead')}
-                              className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 rounded text-[10px] font-bold transition-colors"
+                              className="cb-btn cb-btn-ghost cb-btn-sm cb-green"
                             >
                               ✓ Verify Lead
                             </button>
@@ -229,7 +233,7 @@ export const PublicIntelModal: React.FC<PublicIntelModalProps> = ({
                           {sub.status !== 'dismissed_spam' && (
                             <button
                               onClick={() => handleTriage(sub, 'dismissed_spam')}
-                              className="px-2.5 py-1 bg-noir-800 hover:bg-noir-700 text-noir-400 rounded text-[10px] font-bold transition-colors"
+                              className="cb-btn cb-btn-ghost cb-btn-sm"
                             >
                               Dismiss
                             </button>
@@ -241,7 +245,7 @@ export const PublicIntelModal: React.FC<PublicIntelModalProps> = ({
                               onPromoteToCase(sub.content);
                               onClose();
                             }}
-                            className="px-2.5 py-1 bg-noir-800 hover:bg-noir-700 text-amber-accent rounded text-[10px] font-bold flex items-center gap-1.5 transition-colors"
+                            className="cb-btn cb-btn-ghost cb-btn-sm cb-amber"
                           >
                             <ShieldCheck className="w-3.5 h-3.5" /> Send to AI Extraction Staging
                           </button>

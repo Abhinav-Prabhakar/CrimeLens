@@ -504,24 +504,37 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="cb-workspace relative w-full h-full bg-noir-950 flex flex-col select-none overflow-hidden">
+    <div ref={containerRef} className="cb-workspace kg-view relative w-full h-full flex flex-col gap-2 select-none overflow-hidden">
+      {/* Scoped finish: spacing + compact instrument controls (margin/padding
+          utilities are reset inside .cb-scope, so spacing lives here). */}
+      <style>{`
+        .kg-view .cb-workspace-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;font-family:var(--mono);}
+        .kg-view .cb-select{width:auto;padding:5px 26px 5px 9px;font-family:var(--mono);font-size:11px;}
+        .kg-view .cb-input{width:18rem;padding:5px 9px;font-family:var(--mono);font-size:11px;}
+        .kg-view .kg-strip{display:flex;align-items:center;gap:8px;padding:7px 16px;border:1px solid var(--line);border-radius:8px;background:rgba(16,13,12,0.6);}
+        .kg-view .kg-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;border:1px solid rgba(140,38,32,0.55);border-left:3px solid var(--red);border-radius:6px;background:rgba(26,13,11,0.92);font-family:var(--mono);font-size:11px;color:var(--txt);}
+        .kg-view .kg-drawer{position:absolute;top:16px;right:16px;z-index:20;width:20rem;max-height:24rem;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:11px;color:var(--txt);}
+        .kg-view .kg-pl-card{padding:8px 10px;}
+        .kg-view .cb-btn.kg-on{border-color:#6e5518;color:#d9a520;background:rgba(217,165,32,0.14);}
+      `}</style>
+
       {/* Top Analytical Bar */}
-      <div className="cb-workspace-head z-20 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-noir-900 border-b border-noir-700 text-xs font-mono text-noir-200">
+      <div className="cb-workspace-head z-20 text-[11px] text-noir-200">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 font-bold text-amber-accent">
-            <Share2 className="w-4 h-4" /> KNOWLEDGE GRAPH ANALYTICS
+          <span className="cb-eyebrow cb-amber flex items-center gap-1.5">
+            <Share2 className="w-4 h-4" /> Knowledge Graph Analytics
           </span>
-          <div className="h-4 w-px bg-noir-700" />
-          <span className="text-noir-400">
+          <div className="h-4 w-px bg-noir-600" />
+          <span className="cb-dim">
             Nodes: <strong className="text-noir-100">{visibleEntities.length}</strong>
             {visibleEntities.length !== entities.length && (
-              <span className="text-noir-500"> / {entities.length}</span>
+              <span className="cb-faint"> / {entities.length}</span>
             )}
           </span>
-          <span className="text-noir-400">
+          <span className="cb-dim">
             Edges: <strong className="text-noir-100">{visibleRelationships.length}</strong>
           </span>
-          <span className="text-noir-400">
+          <span className="cb-dim">
             Communities: <strong className="text-noir-100">{communities.communityCount}</strong>
           </span>
         </div>
@@ -535,7 +548,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               setSourcePathId(e.target.value);
               invalidatePath();
             }}
-            className="bg-noir-800 border border-noir-600 rounded px-2 py-1 text-noir-100 focus:outline-none"
+            className="cb-select"
           >
             <option value="">Origin Suspect...</option>
             {visibleEntities.map((e) => (
@@ -544,14 +557,14 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
               </option>
             ))}
           </select>
-          <span className="text-noir-500">→</span>
+          <span className="cb-faint">→</span>
           <select
             value={targetPathId}
             onChange={(e) => {
               setTargetPathId(e.target.value);
               invalidatePath();
             }}
-            className="bg-noir-800 border border-noir-600 rounded px-2 py-1 text-noir-100 focus:outline-none"
+            className="cb-select"
           >
             <option value="">Target Suspect...</option>
             {visibleEntities.map((e) => (
@@ -563,26 +576,22 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           <button
             onClick={handleCalculatePath}
             disabled={!sourcePathId || !targetPathId}
-            className="px-2.5 py-1 bg-crimson hover:bg-crimson-bright disabled:opacity-40 text-white rounded font-bold transition-colors"
+            className="cb-btn cb-btn-primary cb-btn-sm"
           >
             Find Path
           </button>
           {pathResult && (
-            <button onClick={() => setPathResult(null)} className="px-2 py-1 bg-noir-800 hover:bg-noir-700 text-noir-400 rounded">
+            <button onClick={() => setPathResult(null)} className="cb-btn cb-btn-ghost cb-btn-sm">
               Clear
             </button>
           )}
         </div>
 
         {/* View Options & Predictions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowPredictions(!showPredictions)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border transition-colors ${
-              showPredictions
-                ? 'bg-amber-accent/20 border-amber-accent text-amber-accent'
-                : 'bg-noir-800 border-noir-700 text-noir-400 hover:text-noir-200'
-            }`}
+            className={`cb-btn cb-btn-sm ${showPredictions ? 'kg-on' : 'cb-btn-ghost'}`}
           >
             <Sparkles className="w-3.5 h-3.5" />
             Link Prediction ({predictedLinks.length})
@@ -591,21 +600,21 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           <select
             value={colorMode}
             onChange={(e: any) => setColorMode(e.target.value)}
-            className="bg-noir-800 border border-noir-600 rounded px-2 py-1 text-noir-100 focus:outline-none"
+            className="cb-select"
           >
             <option value="community">Color: Communities</option>
             <option value="type">Color: Entity Type</option>
             <option value="centrality">Color: Centrality Heatmap</option>
           </select>
 
-          <div className="flex items-center gap-1 bg-noir-800 border border-noir-600 rounded px-1 py-0.5">
-            <button onClick={() => zoomAt(1.25)} className="p-0.5 text-noir-400 hover:text-noir-100" title="Zoom in">
+          <div className="cb-card flex items-center gap-0.5" style={{ padding: 2 }}>
+            <button onClick={() => zoomAt(1.25)} className="cb-btn cb-btn-ghost cb-btn-icon" title="Zoom in">
               <ZoomIn className="w-3.5 h-3.5" />
             </button>
-            <button onClick={() => zoomAt(1 / 1.25)} className="p-0.5 text-noir-400 hover:text-noir-100" title="Zoom out">
+            <button onClick={() => zoomAt(1 / 1.25)} className="cb-btn cb-btn-ghost cb-btn-icon" title="Zoom out">
               <ZoomOut className="w-3.5 h-3.5" />
             </button>
-            <button onClick={resetView} className="p-0.5 text-noir-400 hover:text-noir-100" title="Reset view">
+            <button onClick={resetView} className="cb-btn cb-btn-ghost cb-btn-icon" title="Reset view">
               <Crosshair className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -613,40 +622,40 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       </div>
 
       {/* Search box */}
-      <div className="z-20 flex items-center gap-2 px-4 py-1.5 bg-noir-900/60 border-b border-noir-800 font-mono text-xs">
-        <Search className="w-3.5 h-3.5 text-noir-500" />
+      <div className="kg-strip z-20">
+        <Search className="w-3.5 h-3.5 cb-faint" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Highlight entities by name..."
-          className="bg-transparent text-noir-200 placeholder:text-noir-600 focus:outline-none w-72"
+          className="cb-input"
         />
-        <span className="text-[10px] text-noir-600 ml-auto">
+        <span className="text-[10px] cb-faint ml-auto">
           drag nodes • drag canvas to pan • scroll to zoom
         </span>
       </div>
 
       {/* Path Finding Result Banner */}
       {pathResult && (
-        <div className="z-20 bg-noir-850/95 border-b border-crimson/40 px-4 py-2 flex items-center justify-between text-xs font-mono text-noir-200">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-crimson" />
+        <div className="kg-banner z-20">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldAlert className="w-4 h-4 text-crimson flex-shrink-0" />
             {pathResult.found ? (
-              <span>
+              <span className="truncate">
                 <strong className="text-crimson">PATH DISCOVERED ({pathResult.path.length} hops):</strong>{' '}
                 {pathResult.path.map((id) => visibleEntities.find((e) => e.id === id)?.label || id).join('  ──►  ')}
               </span>
             ) : (
-              <span className="text-amber-accent">No connecting path found between selected entities.</span>
+              <span className="cb-amber">No connecting path found between selected entities.</span>
             )}
           </div>
-          <span className="text-noir-400">Total Distance: {pathResult.distance.toFixed(2)}</span>
+          <span className="cb-dim flex-shrink-0">Total Distance: {pathResult.distance.toFixed(2)}</span>
         </div>
       )}
 
       {/* Main Canvas */}
-      <div className="relative flex-1 w-full h-full">
+      <div className="relative flex-1 w-full min-h-0">
         <canvas
           ref={canvasRef}
           onPointerDown={handlePointerDown}
@@ -660,31 +669,38 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
 
         {/* Predictive Links Drawer Overlay */}
         {showPredictions && predictedLinks.length > 0 && (
-          <div className="absolute top-4 right-4 z-20 w-80 max-h-96 overflow-y-auto bg-noir-850/95 border border-amber-accent/40 rounded-lg p-3 shadow-xl backdrop-blur-md font-mono text-xs text-noir-200 space-y-2.5">
-            <div className="flex items-center justify-between font-bold text-amber-accent border-b border-noir-700 pb-1.5">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" /> SUGGESTED COVERT LINKS
+          <div className="cb-card kg-drawer cb-scroll">
+            <div className="flex items-center justify-between border-b border-noir-600" style={{ paddingBottom: 6, marginBottom: 10 }}>
+              <span className="cb-eyebrow cb-amber flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Suggested Covert Links
               </span>
-              <span className="text-[10px] text-noir-400">GRAPH HEURISTIC</span>
+              <span className="cb-badge">Graph Heuristic</span>
             </div>
-            {predictedLinks.map((pl, idx) => (
-              <div key={idx} className="p-2 bg-noir-800/80 rounded border border-noir-700 space-y-1">
-                <div className="flex items-center justify-between font-bold">
-                  <span className="text-noir-100">{pl.sourceLabel}</span>
-                  <span className="text-amber-accent">{(pl.score * 100).toFixed(0)}%</span>
+            <div className="cb-list">
+              {predictedLinks.map((pl, idx) => (
+                <div key={idx} className="cb-metric kg-pl-card">
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="text-noir-100">{pl.sourceLabel}</span>
+                    <span className="cb-amber">{(pl.score * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="text-[10px] cb-faint" style={{ marginTop: 2 }}>
+                    ─────?───── {pl.targetLabel}
+                  </div>
+                  <div className="text-[10px] cb-dim" style={{ marginTop: 2 }}>
+                    Signals: {pl.reasons.join(', ')}
+                  </div>
+                  {onAddPredictedLink && (
+                    <button
+                      onClick={() => onAddPredictedLink(pl)}
+                      className="cb-btn cb-btn-ghost cb-btn-sm w-full"
+                      style={{ marginTop: 6 }}
+                    >
+                      + Stage to Graph (Requires Confirmation)
+                    </button>
+                  )}
                 </div>
-                <div className="text-[10px] text-noir-400">─────?───── {pl.targetLabel}</div>
-                <div className="text-[10px] text-noir-400">Signals: {pl.reasons.join(', ')}</div>
-                {onAddPredictedLink && (
-                  <button
-                    onClick={() => onAddPredictedLink(pl)}
-                    className="w-full mt-1.5 py-1 bg-noir-700 hover:bg-amber-accent/20 text-noir-200 hover:text-amber-accent rounded text-[10px] font-bold transition-colors"
-                  >
-                    + Stage to Graph (Requires Confirmation)
-                  </button>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>

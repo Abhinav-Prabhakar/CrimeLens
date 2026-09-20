@@ -145,38 +145,40 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
   };
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier w-full max-w-4xl max-h-[90vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier w-full max-w-4xl max-h-[90vh] flex flex-col font-sans text-xs text-noir-200 overflow-hidden">
         {/* Modal Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
-          <div className="flex items-center gap-2.5">
-            <Upload className="w-5 h-5 text-crimson" />
-            <div>
+        <div className="cb-dossier-head flex items-center justify-between gap-3 px-6 py-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="cb-row-icon text-crimson">
+              <Upload className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
               <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
                 Document Ingestion & AI Intelligence Extraction
               </h2>
-              <p className="text-[11px] text-noir-400">
+              <p className="cb-dim text-[11px]">
                 Ingest reports, FIRs, CDRs, or transcripts. Extracted entities require investigator confirmation.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon" title="Close">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="cb-dossier-body cb-scroll flex-1 overflow-y-auto p-6 space-y-5">
           {!extractionResult ? (
             <>
               {/* Preloaded Samples Bar */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-noir-400 uppercase">Pre-loaded Samples:</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="cb-eyebrow">Pre-loaded Samples</span>
                 {SAMPLE_REPORTS.map((s, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSelectSample(s)}
-                    className="px-2.5 py-1 bg-noir-800 hover:bg-noir-700 text-noir-300 hover:text-noir-100 rounded border border-noir-700 text-[11px] transition-colors"
+                    className="cb-btn cb-btn-ghost cb-btn-sm"
                   >
                     {s.title}
                   </button>
@@ -185,21 +187,21 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
 
               {/* Title & Document Type */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] uppercase text-noir-400">Document Designation / Source Title</label>
+                <div className="col-span-2">
+                  <label className="cb-field-label">Document Designation / Source Title</label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-noir-800 border border-noir-700 rounded px-3 py-2 text-noir-100 focus:border-crimson focus:outline-none"
+                    className="cb-input"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase text-noir-400">Document Type</label>
+                <div>
+                  <label className="cb-field-label">Document Type</label>
                   <select
                     value={docType}
                     onChange={(e) => setDocType(e.target.value)}
-                    className="w-full bg-noir-800 border border-noir-700 rounded px-3 py-2 text-noir-100 focus:border-crimson focus:outline-none"
+                    className="cb-select"
                   >
                     <option value="fir">FIR / Police Incident Report</option>
                     <option value="interrogation">Interrogation Transcript</option>
@@ -212,48 +214,48 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
               </div>
 
               {/* Raw Text Input */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase text-noir-400">Raw Document Text / Transcribed Content</label>
+              <div>
+                <label className="cb-field-label">Raw Document Text / Transcribed Content</label>
                 <textarea
                   rows={9}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Paste FIR text, seized chat logs, phone numbers, vehicle numbers, or bank transfers..."
-                  className="w-full bg-noir-950 border border-noir-700 rounded-lg p-3 text-[11px] text-noir-100 font-mono leading-relaxed focus:border-crimson focus:outline-none"
+                  className="cb-textarea cb-mono text-[11px] leading-relaxed"
                 />
               </div>
 
               {errorMsg && (
-                <div className="p-3 bg-crimson/10 border border-crimson/40 rounded text-crimson flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <div className="cb-alert cb-alert-red">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-crimson" />
                   <span>{errorMsg}</span>
                 </div>
               )}
             </>
           ) : (
             /* Extraction Staging Area */
-            <div className="space-y-4">
-              <div className="p-3 bg-noir-850 border border-noir-700 rounded-lg space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-accent flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4" /> AI EXTRACTION SUMMARY
+            <div className="space-y-5">
+              <div className="cb-card cb-card-pad space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="cb-amber cb-mono font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4" /> AI Extraction Summary
                   </span>
-                  <span className="text-[10px] text-noir-400 uppercase">Engine: {sourceUsed}</span>
+                  <span className="cb-badge flex-shrink-0">Engine: {sourceUsed}</span>
                 </div>
-                <p className="text-noir-300 text-[11px]">{extractionResult.investigativeSummary}</p>
+                <p className="text-noir-300 text-[12px] leading-relaxed">{extractionResult.investigativeSummary}</p>
               </div>
 
               {/* Proposed Entities Table */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-noir-100 uppercase">Proposed Entities ({stagingEntities.length})</h3>
-                  <span className="text-[10px] text-noir-400">Uncheck any false leads before committing</span>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="cb-eyebrow">Proposed Entities ({stagingEntities.length})</h3>
+                  <span className="cb-faint text-[10px]">Uncheck any false leads before committing</span>
                 </div>
 
-                <div className="max-h-52 overflow-y-auto border border-noir-700 rounded-lg divide-y divide-noir-800">
-                  {stagingEntities.map((ent, idx) => (
-                    <div key={idx} className="p-2.5 bg-noir-950/60 flex items-center justify-between gap-3 hover:bg-noir-900">
-                      <div className="flex items-center gap-3">
+                <div className="cb-card cb-scroll max-h-56 overflow-y-auto p-1.5">
+                  <div className="cb-list">
+                    {stagingEntities.map((ent, idx) => (
+                      <div key={idx} className="cb-row">
                         <input
                           type="checkbox"
                           checked={ent.checked}
@@ -262,36 +264,32 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
                             copy[idx].checked = e.target.checked;
                             setStagingEntities(copy);
                           }}
-                          className="accent-crimson rounded"
+                          className="accent-crimson rounded flex-shrink-0"
                         />
-                        <div>
-                          <div className="font-bold text-noir-100">{ent.label}</div>
-                          <div className="text-[10px] text-noir-400">
-                            Type: <span className="uppercase text-noir-300">{ent.type}</span> • Card:{' '}
-                            <span className="uppercase text-noir-300">{ent.visualType}</span>
-                          </div>
+                        <div className="cb-row-main">
+                          <span className="cb-row-title">{ent.label}</span>
+                          <span className="cb-row-sub">Card: {ent.visualType}</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="px-2 py-0.5 bg-noir-800 rounded text-amber-accent font-bold">
-                          {(ent.confidence * 100).toFixed(0)}% Conf
+                        <span className="cb-badge cb-badge-cobalt flex-shrink-0">{ent.type}</span>
+                        <span className="cb-badge cb-badge-amber flex-shrink-0">
+                          {(ent.confidence * 100).toFixed(0)}% conf
                         </span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {/* Proposed Relationships */}
               {stagingRelationships.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-bold text-noir-100 uppercase">
+                  <h3 className="cb-eyebrow">
                     Proposed Connections ({stagingRelationships.length})
                   </h3>
-                  <div className="max-h-40 overflow-y-auto border border-noir-700 rounded-lg divide-y divide-noir-800">
-                    {stagingRelationships.map((rel, idx) => (
-                      <div key={idx} className="p-2 bg-noir-950/60 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
+                  <div className="cb-card cb-scroll max-h-44 overflow-y-auto p-1.5">
+                    <div className="cb-list">
+                      {stagingRelationships.map((rel, idx) => (
+                        <div key={idx} className="cb-row">
                           <input
                             type="checkbox"
                             checked={rel.checked}
@@ -300,16 +298,16 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
                               copy[idx].checked = e.target.checked;
                               setStagingRelationships(copy);
                             }}
-                            className="accent-crimson rounded"
+                            className="accent-crimson rounded flex-shrink-0"
                           />
-                          <span className="text-noir-200">
+                          <div className="cb-row-main text-[12px] text-noir-200">
                             <strong>{rel.sourceLabel}</strong> ──[<span className="text-crimson font-bold">{rel.predicate}</span>]──►{' '}
                             <strong>{rel.targetLabel}</strong>
-                          </span>
+                          </div>
+                          <span className="cb-badge flex-shrink-0">{(rel.confidence * 100).toFixed(0)}%</span>
                         </div>
-                        <span className="text-[10px] text-noir-400 font-mono">{(rel.confidence * 100).toFixed(0)}%</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -317,14 +315,14 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
               {/* Proposed Timeline Events */}
               {stagingEvents.length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="font-bold text-noir-100 uppercase flex items-center gap-1.5">
+                  <h3 className="cb-eyebrow flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-amber-accent" />
                     Proposed Chronology Events ({stagingEvents.length})
                   </h3>
-                  <div className="max-h-36 overflow-y-auto border border-noir-700 rounded-lg divide-y divide-noir-800">
-                    {stagingEvents.map((ev, idx) => (
-                      <div key={idx} className="p-2 bg-noir-950/60 flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-2.5">
+                  <div className="cb-card cb-scroll max-h-40 overflow-y-auto p-1.5">
+                    <div className="cb-list">
+                      {stagingEvents.map((ev, idx) => (
+                        <div key={idx} className="cb-row items-start">
                           <input
                             type="checkbox"
                             checked={ev.checked}
@@ -333,24 +331,24 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
                               copy[idx].checked = e.target.checked;
                               setStagingEvents(copy);
                             }}
-                            className="accent-crimson rounded mt-0.5"
+                            className="accent-crimson rounded mt-1 flex-shrink-0"
                           />
-                          <div>
-                            <div className="text-noir-200">{ev.description}</div>
+                          <div className="cb-row-main">
+                            <div className="text-[12px] text-noir-200">{ev.description}</div>
                             {ev.entitiesInvolved?.length > 0 && (
-                              <div className="text-[10px] text-noir-500">Actors: {ev.entitiesInvolved.join(', ')}</div>
+                              <span className="cb-row-sub">Actors: {ev.entitiesInvolved.join(', ')}</span>
                             )}
                           </div>
+                          <span className="cb-badge cb-badge-amber flex-shrink-0 whitespace-nowrap">
+                            {ev.timestamp && !Number.isNaN(new Date(ev.timestamp).getTime())
+                              ? new Date(ev.timestamp).toLocaleString()
+                              : 'undated'}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-amber-accent font-mono whitespace-nowrap">
-                          {ev.timestamp && !Number.isNaN(new Date(ev.timestamp).getTime())
-                            ? new Date(ev.timestamp).toLocaleString()
-                            : 'undated'}
-                        </span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-[10px] text-noir-500 italic">
+                  <p className="cb-faint text-[10px] italic">
                     Committed events join the case chronology and power the temporal scrubber. Undated events are
                     anchored to ingestion time and explicitly flagged.
                   </p>
@@ -361,20 +359,20 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 bg-noir-850 border-t border-noir-700">
+        <div className="cb-dossier-foot flex items-center justify-between px-6 py-4">
           {!extractionResult ? (
             <>
-              <button onClick={onClose} className="px-4 py-2 text-noir-400 hover:text-noir-200">
+              <button onClick={onClose} className="cb-btn cb-btn-ghost">
                 Cancel
               </button>
               <button
                 onClick={handleRunExtraction}
                 disabled={isExtracting || !content.trim()}
-                className="px-5 py-2 bg-crimson hover:bg-crimson-bright disabled:opacity-40 text-white rounded font-bold flex items-center gap-2 transition-colors"
+                className="cb-btn cb-btn-primary"
               >
                 {isExtracting ? (
                   <>
-                    <span className="animate-spin">⚙</span> Extracting with CrimeLens AI...
+                    <Sparkles className="w-4 h-4 animate-spin" /> Extracting with CrimeLens AI...
                   </>
                 ) : (
                   <>
@@ -387,13 +385,13 @@ export const DocumentIngestModal: React.FC<DocumentIngestModalProps> = ({
             <>
               <button
                 onClick={() => setExtractionResult(null)}
-                className="px-4 py-2 text-noir-400 hover:text-noir-200"
+                className="cb-btn cb-btn-ghost"
               >
                 ← Back to Raw Text
               </button>
               <button
                 onClick={handleCommit}
-                className="px-5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold flex items-center gap-2 transition-colors"
+                className="cb-btn cb-btn-primary"
               >
                 <Check className="w-4 h-4" /> Commit Confirmed to Investigation Graph
               </button>

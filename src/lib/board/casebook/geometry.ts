@@ -50,6 +50,7 @@ export function makePin(colorHex: number): THREE.Group {
       roughness: 0.22,
       emissive: colorHex,
       emissiveIntensity: 0.04,
+      depthWrite: false,
     }),
   );
   head.position.z = PIN_Z;
@@ -60,6 +61,7 @@ export function makePin(colorHex: number): THREE.Group {
       color: 0xd8d8d8,
       metalness: 0.95,
       roughness: 0.18,
+      depthWrite: false,
     }),
   );
   needle.rotation.x = Math.PI / 2;
@@ -426,6 +428,7 @@ export class Rope implements RopeLike {
       emissiveIntensity: 0,
     });
     this.mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.mat);
+    this.mesh.renderOrder = 1000;
     this.mesh.castShadow = true;
     if (this.live) this.mesh.renderOrder = 5;
     this.scene.add(this.mesh);

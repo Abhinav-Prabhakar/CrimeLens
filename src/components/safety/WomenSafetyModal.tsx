@@ -92,35 +92,37 @@ export const WomenSafetyModal: React.FC<WomenSafetyModalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier w-full max-w-2xl max-h-[85vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
-          <div className="flex items-center gap-2.5">
-            <HeartHandshake className="w-5 h-5 text-crimson" />
+        <div className="cb-dossier-head flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <HeartHandshake className="w-5 h-5 text-crimson flex-none" />
             <div>
+              <div className="cb-eyebrow">Emergency Assistance Network</div>
               <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
                 Women Safety & Emergency Assistance Network
               </h2>
-              <p className="text-[11px] text-noir-400">
+              <p className="text-[11px] cb-dim mt-0.5">
                 Rapid escalation network, trusted well-wisher contacts, and emergency assistance routing. Contacts
                 persist locally in IndexedDB.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon flex-none" title="Close">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto">
+        <div className="cb-dossier-body cb-scroll p-6 space-y-5 overflow-y-auto">
           {/* Emergency Escalation */}
-          <div className="p-4 bg-crimson/10 border border-crimson/40 rounded-xl flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="font-bold text-crimson uppercase flex items-center gap-1.5">
-                <AlertCircle className="w-4 h-4" /> ONE-TOUCH RAPID ESCALATION
+          <div className="cb-alert cb-alert-red">
+            <AlertCircle className="w-4 h-4 cb-red flex-none mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <span className="cb-mono text-[10px] font-bold cb-red uppercase tracking-wider">
+                One-Touch Rapid Escalation
               </span>
-              <p className="text-[11px] text-noir-300">
+              <p className="text-[11px] cb-dim">
                 Simulated dispatch: GPS beacon + alert to your {contacts.length} trusted contact(s) and the 1091
                 women&rsquo;s helpline. The dispatch is recorded in the active case audit trail.
               </p>
@@ -129,24 +131,16 @@ export const WomenSafetyModal: React.FC<WomenSafetyModalProps> = ({ isOpen, onCl
               <button
                 onClick={() => setConfirmingSos(true)}
                 disabled={contacts.length === 0}
-                className="px-4 py-2.5 rounded font-bold whitespace-nowrap bg-crimson hover:bg-crimson-bright disabled:opacity-40 text-white shadow-lg shadow-crimson/30 animate-pulse transition-colors"
+                className="cb-btn cb-btn-danger animate-pulse whitespace-nowrap self-center flex-none"
               >
-                <span className="flex items-center gap-2">
-                  <Siren className="w-4 h-4" /> TRIGGER SOS
-                </span>
+                <Siren className="w-3.5 h-3.5" /> Trigger SOS
               </button>
             ) : (
-              <div className="flex flex-col gap-1.5">
-                <button
-                  onClick={handleTriggerSOS}
-                  className="px-4 py-2 bg-crimson-bright text-white rounded font-bold"
-                >
-                  CONFIRM DISPATCH
+              <div className="flex flex-col gap-1.5 self-center flex-none">
+                <button onClick={handleTriggerSOS} className="cb-btn cb-btn-primary cb-btn-sm">
+                  Confirm Dispatch
                 </button>
-                <button
-                  onClick={() => setConfirmingSos(false)}
-                  className="px-4 py-1 bg-noir-800 text-noir-300 rounded text-[10px]"
-                >
+                <button onClick={() => setConfirmingSos(false)} className="cb-btn cb-btn-ghost cb-btn-sm">
                   Cancel
                 </button>
               </div>
@@ -155,47 +149,59 @@ export const WomenSafetyModal: React.FC<WomenSafetyModalProps> = ({ isOpen, onCl
 
           {/* Dispatch receipt */}
           {sosDispatch && (
-            <div className="p-4 bg-emerald-950/40 border border-emerald-800 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-emerald-400 uppercase">Dispatch Receipt</span>
-                <span className="text-[10px] text-noir-400">{new Date(sosDispatch.at).toLocaleString()}</span>
+            <div className="cb-alert cb-alert-green">
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="cb-mono text-[10px] font-bold cb-green uppercase tracking-wider">
+                    Dispatch Receipt
+                  </span>
+                  <span className="cb-faint cb-mono text-[10px]">
+                    {new Date(sosDispatch.at).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] cb-dim cb-mono">
+                  <MapPin className="w-3.5 h-3.5 cb-red flex-none" /> {sosDispatch.coords}
+                </div>
+                <ul className="space-y-1">
+                  {sosDispatch.statuses.map((s, i) => (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between gap-2 text-[10px] cb-mono bg-noir-950 rounded px-2 py-1 border border-noir-700"
+                    >
+                      <span className="text-noir-200">{s.contact}</span>
+                      <span className={s.state === 'sent' ? 'cb-green' : 'cb-red'}>
+                        {s.state === 'sent' ? '✓ ALERT SENT' : '✗ FAILED'} · {s.channel}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-noir-300">
-                <MapPin className="w-3.5 h-3.5 text-crimson" /> {sosDispatch.coords}
-              </div>
-              <ul className="space-y-1">
-                {sosDispatch.statuses.map((s, i) => (
-                  <li key={i} className="flex items-center justify-between text-[10px] bg-noir-950 rounded px-2 py-1 border border-noir-800">
-                    <span className="text-noir-200">{s.contact}</span>
-                    <span className={s.state === 'sent' ? 'text-emerald-400' : 'text-crimson'}>
-                      {s.state === 'sent' ? '✓ ALERT SENT' : '✗ FAILED'} · {s.channel}
-                    </span>
-                  </li>
-                ))}
-              </ul>
             </div>
           )}
 
           {/* Trusted Contacts List */}
           <div className="space-y-3">
-            <h3 className="font-bold text-noir-100 uppercase">Trusted Well-Wisher Circle ({contacts.length})</h3>
+            <h3 className="cb-eyebrow">Trusted Well-Wisher Circle ({contacts.length})</h3>
             {contacts.length === 0 ? (
-              <div className="py-6 text-center text-noir-500 text-[11px] border border-noir-800 rounded-lg">
+              <div className="cb-empty border border-dashed border-noir-700 rounded-md">
                 No trusted contacts registered yet. Add at least one to enable SOS dispatch.
               </div>
             ) : (
-              <div className="divide-y divide-noir-800 border border-noir-700 rounded-lg overflow-hidden">
+              <div className="cb-list">
                 {contacts.map((c) => (
-                  <div key={c.id} className="p-3 bg-noir-950 flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-noir-100">{c.name}</div>
-                      <div className="text-[10px] text-noir-400">
+                  <div key={c.id} className="cb-row" style={{ cursor: 'default' }}>
+                    <div className="cb-row-icon">
+                      <HeartHandshake className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="cb-row-main">
+                      <span className="cb-row-title">{c.name}</span>
+                      <span className="cb-row-sub">
                         {c.relation} • {c.phone}
-                      </div>
+                      </span>
                     </div>
                     <button
                       onClick={() => handleRemoveContact(c.id)}
-                      className="p-1.5 text-noir-600 hover:text-crimson rounded transition-colors"
+                      className="cb-btn cb-btn-ghost cb-btn-icon cb-btn-sm flex-none"
                       title="Remove contact"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -207,35 +213,32 @@ export const WomenSafetyModal: React.FC<WomenSafetyModalProps> = ({ isOpen, onCl
           </div>
 
           {/* Add Trusted Contact Form */}
-          <form onSubmit={handleAddContact} className="p-4 bg-noir-850 rounded-lg border border-noir-700 space-y-3">
-            <h4 className="font-bold text-noir-200 uppercase text-[11px]">Add Trusted Well-Wisher</h4>
+          <form onSubmit={handleAddContact} className="cb-card cb-card-pad space-y-3">
+            <h4 className="cb-eyebrow">Add Trusted Well-Wisher</h4>
             <div className="grid grid-cols-3 gap-2">
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Full Name"
-                className="bg-noir-900 border border-noir-700 rounded px-2.5 py-1.5 text-noir-100 text-[11px] focus:border-crimson focus:outline-none"
+                className="cb-input"
               />
               <input
                 type="text"
                 value={newRelation}
                 onChange={(e) => setNewRelation(e.target.value)}
                 placeholder="Relation (Sister, Friend...)"
-                className="bg-noir-900 border border-noir-700 rounded px-2.5 py-1.5 text-noir-100 text-[11px] focus:border-crimson focus:outline-none"
+                className="cb-input"
               />
               <input
                 type="text"
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
                 placeholder="Phone (+91...)"
-                className="bg-noir-900 border border-noir-700 rounded px-2.5 py-1.5 text-noir-100 text-[11px] focus:border-crimson focus:outline-none"
+                className="cb-input"
               />
             </div>
-            <button
-              type="submit"
-              className="w-full py-1.5 bg-noir-700 hover:bg-noir-600 text-noir-100 rounded font-bold transition-colors"
-            >
+            <button type="submit" className="cb-btn w-full">
               + Register Trusted Contact
             </button>
           </form>

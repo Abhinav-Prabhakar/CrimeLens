@@ -200,67 +200,64 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
 
   return (
     <div
-      className={`cb-dossier cb-drawer fixed top-14 right-4 z-40 bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden transition-all duration-300 backdrop-blur-md ${
-        isExpanded ? 'w-[750px] h-[88vh]' : 'w-[450px] h-[85vh]'
+      className={`cb-dossier cb-drawer z-40 flex flex-col overflow-hidden font-sans text-xs text-noir-200 max-w-[calc(100vw-24px)] transition-all duration-300 ${
+        isExpanded ? 'w-[750px]' : 'w-[440px]'
       }`}
     >
       {/* Header */}
-      <div className="cb-dossier-head flex items-center justify-between px-4 py-3 bg-noir-850 border-b border-noir-700">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-amber-accent/20 border border-amber-accent/40 flex items-center justify-center text-amber-accent">
+      <div className="cb-dossier-head flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="cb-row-icon text-amber-accent">
             <Sparkles className="w-4 h-4" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-noir-100 uppercase tracking-wider text-xs">
+              <h2 className="font-bold text-noir-100 uppercase tracking-wider text-xs truncate">
                 AI Investigator Assistant
-              </span>
-              <span className="px-1.5 py-0.2 bg-emerald-950 border border-emerald-800 text-emerald-400 text-[9px] font-bold rounded">
-                GPT-OSS 120B
-              </span>
+              </h2>
+              <span className="cb-badge cb-badge-amber flex-shrink-0">GPT-OSS 120B</span>
             </div>
-            <div className="text-[10px] text-noir-400">Context: {activeCase?.title}</div>
+            <div className="cb-faint text-[10px] mt-0.5 truncate cb-mono">
+              Context: {activeCase?.title}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 text-noir-400 hover:text-noir-100 rounded hover:bg-noir-800 transition-colors"
+            className="cb-btn cb-btn-ghost cb-btn-icon"
             title={isExpanded ? 'Collapse' : 'Expand'}
           >
             {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
           <button
             onClick={handleExportChat}
-            className="p-1.5 text-noir-400 hover:text-noir-100 rounded hover:bg-noir-800 transition-colors"
+            className="cb-btn cb-btn-ghost cb-btn-icon"
             title="Export Transcript (.md)"
           >
             <Download className="w-4 h-4" />
           </button>
           <button
             onClick={handleClearHistory}
-            className="p-1.5 text-noir-400 hover:text-crimson rounded hover:bg-noir-800 transition-colors"
+            className="cb-btn cb-btn-ghost cb-btn-icon"
             title="Clear Chat History"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-noir-400 hover:text-noir-100 rounded hover:bg-noir-800 transition-colors"
-          >
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon" title="Close">
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Suggested Action Chips */}
-      <div className="px-3 py-2 bg-noir-950 border-b border-noir-800 overflow-x-auto flex gap-1.5 scrollbar-none">
+      <div className="cb-scroll px-3 py-2 border-b border-noir-700 overflow-x-auto flex gap-1.5">
         {ACTION_PROMPTS.map((item, idx) => (
           <button
             key={idx}
             onClick={() => handleSend(item.prompt)}
-            className="flex-shrink-0 px-2.5 py-1 bg-noir-850 hover:bg-noir-750 text-noir-300 hover:text-amber-accent border border-noir-700 hover:border-amber-accent/50 rounded text-[10px] transition-colors whitespace-nowrap"
+            className="cb-btn cb-btn-ghost cb-btn-sm flex-shrink-0 whitespace-nowrap"
           >
             {item.label}
           </button>
@@ -268,7 +265,7 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
       </div>
 
       {/* Chat Messages Log */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-noir-900/60">
+      <div className="cb-dossier-body cb-scroll flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((m) => (
           <div
             key={m.id}
@@ -276,7 +273,7 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
               m.sender === 'user' ? 'items-end' : 'items-start'
             }`}
           >
-            <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-noir-500">
+            <div className="cb-eyebrow flex items-center gap-1.5 mb-1 px-1">
               {m.sender === 'user' ? (
                 <>
                   <span>Investigator</span>
@@ -288,57 +285,58 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
                   <span>CrimeLens AI</span>
                 </>
               )}
-              <span>• {m.timestamp}</span>
+              <span className="cb-faint">· {m.timestamp}</span>
             </div>
 
             <div
-              className={`relative group rounded-xl p-4 text-[11px] leading-relaxed max-w-[95%] overflow-x-auto ${
+              className="cb-card cb-card-pad relative group max-w-[95%] overflow-x-auto text-[12px] leading-relaxed"
+              style={
                 m.sender === 'user'
-                  ? 'bg-crimson/15 border border-crimson/40 text-noir-100'
-                  : 'bg-noir-850/95 border border-noir-700 text-noir-200 shadow-lg'
-              }`}
+                  ? { borderRight: '2px solid #4a3b34' }
+                  : { borderLeft: '2px solid #8c2620' }
+              }
             >
               {/* Copy Button */}
               <button
                 onClick={() => handleCopyText(m.text, m.id)}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 bg-noir-800 hover:bg-noir-700 rounded text-noir-400 hover:text-noir-100 transition-opacity"
+                className="cb-btn cb-btn-ghost cb-btn-icon absolute top-2 right-2 opacity-0 group-hover:opacity-100"
                 title="Copy message"
               >
-                {copiedId === m.id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedId === m.id ? <Check className="w-3.5 h-3.5 cb-green" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
 
               {/* Markdown Content */}
-              <div className="prose prose-invert max-w-none prose-sm font-mono text-[11px] space-y-2">
+              <div className="max-w-none text-[12px] space-y-2">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     table: ({ node, ...props }) => (
-                      <div className="overflow-x-auto my-3 border border-noir-700 rounded-lg">
-                        <table className="w-full text-left border-collapse text-[10px]" {...props} />
+                      <div className="cb-scroll overflow-x-auto my-3 border border-noir-700 rounded-md">
+                        <table className="w-full text-left border-collapse text-[11px]" {...props} />
                       </div>
                     ),
                     thead: ({ node, ...props }) => (
-                      <thead className="bg-noir-800 text-noir-200 uppercase font-bold border-b border-noir-700" {...props} />
+                      <thead className="bg-noir-800 text-noir-200 uppercase font-bold border-b border-noir-700 cb-mono text-[10px] tracking-wider" {...props} />
                     ),
                     th: ({ node, ...props }) => (
                       <th className="px-3 py-2 border-r border-noir-700 last:border-r-0" {...props} />
                     ),
                     td: ({ node, ...props }) => (
-                      <td className="px-3 py-2 border-t border-noir-800 border-r border-noir-800 last:border-r-0 text-noir-300" {...props} />
+                      <td className="px-3 py-2 border-t border-noir-700 border-r last:border-r-0 text-noir-300" {...props} />
                     ),
                     tr: ({ node, ...props }) => (
                       <tr className="hover:bg-noir-800/50 transition-colors" {...props} />
                     ),
-                    h1: ({ node, ...props }) => <h1 className="text-sm font-bold text-noir-100 border-b border-noir-700 pb-1 mt-2 mb-1" {...props} />,
-                    h2: ({ node, ...props }) => <h2 className="text-xs font-bold text-amber-accent border-b border-noir-800 pb-1 mt-2 mb-1" {...props} />,
-                    h3: ({ node, ...props }) => <h3 className="text-xs font-bold text-noir-200 mt-2 mb-1" {...props} />,
-                    strong: ({ node, ...props }) => <strong className="font-bold text-noir-100 text-amber-accent/90" {...props} />,
+                    h1: ({ node, ...props }) => <h1 className="cb-mono text-sm font-bold text-noir-100 uppercase tracking-wider border-b border-noir-700 pb-1 mt-2 mb-1" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="cb-mono text-xs font-bold text-amber-accent uppercase tracking-wider border-b border-noir-700 pb-1 mt-2 mb-1" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-xs font-bold text-noir-100 mt-2 mb-1" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-bold text-amber-accent/90" {...props} />,
                     em: ({ node, ...props }) => <em className="italic text-noir-300" {...props} />,
                     blockquote: ({ node, ...props }) => (
-                      <blockquote className="border-l-2 border-amber-accent/60 pl-3 py-1 bg-noir-900/60 my-2 italic text-noir-300 text-[10px]" {...props} />
+                      <blockquote className="border-l-2 border-amber-dim pl-3 py-1 bg-noir-800/60 my-2 italic text-noir-300 text-[11px]" {...props} />
                     ),
                     code: ({ node, ...props }) => (
-                      <code className="px-1.5 py-0.5 bg-noir-950 border border-noir-700 rounded text-[10px] text-amber-accent" {...props} />
+                      <code className="cb-mono px-1.5 py-0.5 bg-noir-950 border border-noir-700 rounded text-[10px] text-amber-accent" {...props} />
                     ),
                     ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 my-1" {...props} />,
                     ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 my-1" {...props} />,
@@ -354,11 +352,11 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
         ))}
 
         {isLoading && (
-          <div className="p-3 bg-noir-850 border border-amber-accent/30 rounded-xl text-amber-accent flex items-center gap-3 animate-pulse">
-            <Sparkles className="w-4 h-4 animate-spin" />
+          <div className="cb-alert cb-alert-amber items-center animate-pulse">
+            <Sparkles className="w-4 h-4 animate-spin text-amber-accent flex-shrink-0" />
             <div className="space-y-0.5">
-              <span className="font-bold text-[11px]">Forensic Reasoning Engine Active</span>
-              <div className="text-[10px] text-noir-400">Synthesizing evidence graph & statutory legal correlates...</div>
+              <strong className="cb-mono text-[11px] uppercase tracking-wider">Forensic Reasoning Engine Active</strong>
+              <div className="cb-faint text-[10px]">Synthesizing evidence graph & statutory legal correlates...</div>
             </div>
           </div>
         )}
@@ -367,19 +365,20 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
       </div>
 
       {/* Input Field */}
-      <div className="p-3 bg-noir-850 border-t border-noir-700 flex items-center gap-2">
+      <div className="cb-dossier-foot p-3 flex items-center gap-2">
         <input
           type="text"
           value={inputQuery}
           onChange={(e) => setInputQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Ask about connections, hypotheses, evidence, legal charges..."
-          className="flex-1 bg-noir-950 border border-noir-700 rounded-lg px-3 py-2.5 text-noir-100 text-xs focus:border-crimson focus:outline-none placeholder:text-noir-500 font-mono"
+          className="cb-input flex-1 cb-mono text-[11px]"
         />
         <button
           onClick={() => handleSend()}
           disabled={isLoading || !inputQuery.trim()}
-          className="p-2.5 bg-crimson hover:bg-crimson-bright disabled:opacity-40 text-white rounded-lg transition-colors shadow-lg shadow-crimson/20"
+          className="cb-btn cb-btn-primary cb-btn-icon"
+          title="Send inquiry"
         >
           <Send className="w-4 h-4" />
         </button>

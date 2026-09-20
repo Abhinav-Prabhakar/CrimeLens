@@ -148,17 +148,19 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
   };
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier w-full max-w-2xl max-h-[90vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier w-full max-w-2xl max-h-[90vh] flex flex-col font-sans text-xs text-noir-200 overflow-hidden">
         {/* Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
-          <div className="flex items-center gap-2.5">
-            <Camera className="w-5 h-5 text-crimson" />
-            <div>
+        <div className="cb-dossier-head flex items-center justify-between gap-3 px-6 py-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="cb-row-icon text-crimson">
+              <Camera className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
               <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
                 Forensic Image & Object Analysis
               </h2>
-              <p className="text-[11px] text-noir-400">
+              <p className="cb-dim text-[11px]">
                 Real multimodal inference (Groq vision). Results are staged for investigator confirmation — never auto-committed.
               </p>
             </div>
@@ -168,14 +170,15 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
               reset();
               onClose();
             }}
-            className="text-noir-400 hover:text-noir-100"
+            className="cb-btn cb-btn-ghost cb-btn-icon"
+            title="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5 overflow-y-auto">
+        <div className="cb-dossier-body cb-scroll flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
           {/* Upload zone */}
           {!imageData ? (
             <div
@@ -184,15 +187,15 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
                 e.preventDefault();
                 if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
               }}
-              className="p-10 bg-noir-950 border-2 border-dashed border-noir-700 rounded-xl flex flex-col items-center justify-center text-center space-y-3 cursor-pointer hover:border-crimson/50 transition-colors"
+              className="p-10 border-2 border-dashed border-noir-600 rounded-md flex flex-col items-center justify-center text-center gap-3 cursor-pointer hover:border-crimson-dim transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="w-16 h-16 rounded-lg bg-noir-850 border border-noir-700 flex items-center justify-center text-noir-500">
-                <Upload className="w-7 h-7" />
+              <div className="cb-empty-icon">
+                <Upload className="w-5 h-5" />
               </div>
               <div>
                 <div className="font-bold text-noir-100">Upload evidence specimen</div>
-                <p className="text-noir-400 text-[11px] mt-1">
+                <p className="cb-dim text-[11px] mt-1">
                   Drag & drop or click — CCTV stills, surveillance photos, forensic macro shots (max 4 MB)
                 </p>
               </div>
@@ -209,80 +212,81 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
               {/* Preview */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase text-noir-400">Specimen Preview</span>
+                  <span className="cb-eyebrow">Specimen Preview</span>
                   <button
                     onClick={reset}
-                    className="text-[10px] text-noir-400 hover:text-crimson underline underline-offset-2"
+                    className="cb-btn cb-btn-ghost cb-btn-sm"
                   >
-                    choose different image
+                    Choose different image
                   </button>
                 </div>
-                <div className="p-2 bg-noir-950 border border-noir-800 rounded-xl flex items-center justify-center">
+                <div className="cb-card p-2 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={imageData.objectUrl}
                     alt={imageData.fileName}
-                    className="max-h-64 rounded-lg object-contain"
+                    className="max-h-64 rounded object-contain"
                   />
                 </div>
-                <div className="text-[10px] text-noir-500">
+                <div className="cb-faint cb-mono text-[10px]">
                   {imageData.fileName} · {(imageData.base64.length / 1024 / 1.37).toFixed(0)} KB
                 </div>
               </div>
 
               {/* Analysis result staging */}
               {result && (
-                <div className="p-4 bg-noir-850 rounded-xl border border-noir-700 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-amber-accent flex items-center gap-1.5 text-xs">
-                      <Sparkles className="w-4 h-4" /> VISUAL OBJECT DETECTION REPORT
+                <div className="cb-card cb-card-pad space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="cb-amber cb-mono font-bold text-[11px] uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" /> Visual Object Detection Report
                     </span>
-                    <span className="px-2 py-0.5 bg-emerald-950 border border-emerald-800 text-emerald-400 font-bold rounded text-[10px]">
-                      {(result.confidence * 100).toFixed(0)}% CONFIDENCE
+                    <span className="cb-badge cb-badge-green flex-shrink-0">
+                      {(result.confidence * 100).toFixed(0)}% confidence
                     </span>
                   </div>
-                  <p className="text-noir-200 text-[11px] leading-relaxed">{result.description}</p>
-                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <p className="text-noir-200 text-[12px] leading-relaxed">{result.description}</p>
+                  <div className="grid grid-cols-2 gap-2">
                     {result.licensePlate && (
-                      <div className="p-2 bg-noir-950 rounded border border-noir-800">
-                        <span className="text-noir-500 uppercase">Plate Read</span>
-                        <div className="font-bold text-crimson">{result.licensePlate}</div>
+                      <div className="cb-metric p-2">
+                        <span className="cb-faint cb-mono text-[9px] uppercase tracking-widest">Plate Read</span>
+                        <div className="cb-mono font-bold text-crimson">{result.licensePlate}</div>
                       </div>
                     )}
                     {result.vehicleDetails && (
-                      <div className="p-2 bg-noir-950 rounded border border-noir-800">
-                        <span className="text-noir-500 uppercase">Vehicle Estimate</span>
+                      <div className="cb-metric p-2">
+                        <span className="cb-faint cb-mono text-[9px] uppercase tracking-widest">Vehicle Estimate</span>
                         <div className="text-noir-200">{result.vehicleDetails}</div>
                       </div>
                     )}
                     {result.forensicDetails && (
-                      <div className="p-2 bg-noir-950 rounded border border-noir-800 col-span-2">
-                        <span className="text-noir-500 uppercase">Forensic Markings</span>
+                      <div className="cb-metric p-2 col-span-2">
+                        <span className="cb-faint cb-mono text-[9px] uppercase tracking-widest">Forensic Markings</span>
                         <div className="text-noir-200">{result.forensicDetails}</div>
                       </div>
                     )}
                   </div>
-                  <div className="text-[10px] text-noir-400 pt-1 border-t border-noir-800">
+                  <hr className="cb-divider" />
+                  <div className="cb-faint text-[10px]">
                     Uncertainty statement: {result.uncertainty}
                   </div>
 
                   {/* Human-in-the-loop staging fields */}
-                  <div className="space-y-2 pt-2 border-t border-noir-800">
-                    <span className="text-[10px] uppercase text-amber-accent font-bold">
+                  <div className="space-y-2 pt-2 border-t border-noir-700">
+                    <span className="cb-field-label cb-amber !mb-0">
                       Investigator review (edit before pinning)
                     </span>
                     <input
                       type="text"
                       value={stagingLabel}
                       onChange={(e) => setStagingLabel(e.target.value)}
-                      className="w-full bg-noir-900 border border-noir-700 rounded px-2.5 py-1.5 text-noir-100 focus:border-crimson focus:outline-none"
+                      className="cb-input"
                       placeholder="Evidence label"
                     />
                     <textarea
                       rows={3}
                       value={stagingNotes}
                       onChange={(e) => setStagingNotes(e.target.value)}
-                      className="w-full bg-noir-900 border border-noir-700 rounded p-2 text-[10px] text-noir-200 focus:border-crimson focus:outline-none"
+                      className="cb-textarea cb-mono text-[11px]"
                       placeholder="Evidence notes"
                     />
                   </div>
@@ -290,8 +294,8 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
               )}
 
               {errorMsg && (
-                <div className="p-3 bg-crimson/10 border border-crimson/40 rounded text-crimson flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <div className="cb-alert cb-alert-red">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-crimson" />
                   <span>{errorMsg}</span>
                 </div>
               )}
@@ -300,13 +304,13 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-noir-850 border-t border-noir-700">
+        <div className="cb-dossier-foot flex items-center justify-end gap-3 px-6 py-4">
           <button
             onClick={() => {
               reset();
               onClose();
             }}
-            className="px-4 py-2 text-noir-400 hover:text-noir-200"
+            className="cb-btn cb-btn-ghost"
           >
             Cancel
           </button>
@@ -314,11 +318,11 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
             <button
               onClick={handleRunAnalysis}
               disabled={analyzing || !imageData}
-              className="px-5 py-2 bg-crimson hover:bg-crimson-bright disabled:opacity-40 text-white rounded font-bold flex items-center gap-2 transition-colors"
+              className="cb-btn cb-btn-primary"
             >
               {analyzing ? (
                 <>
-                  <span className="animate-spin">⚙</span> Running multimodal inference...
+                  <Sparkles className="w-4 h-4 animate-spin" /> Running multimodal inference...
                 </>
               ) : (
                 <>
@@ -329,7 +333,7 @@ export const ImageAnalysisModal: React.FC<ImageAnalysisModalProps> = ({
           ) : (
             <button
               onClick={handleCommit}
-              className="px-5 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded font-bold flex items-center gap-2 transition-colors"
+              className="cb-btn cb-btn-primary"
             >
               <Check className="w-4 h-4" /> Pin to Corkboard & Graph (AI-Inferred)
             </button>

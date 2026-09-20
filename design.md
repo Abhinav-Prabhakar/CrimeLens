@@ -506,24 +506,38 @@ Required shortcuts remain visible and functional:
 
 ## 11. Implementation Contract
 
-Use these shared classes for new or migrated UI:
+Use the shared UI kit defined in `src/components/board/casebook/casebook.css` for new or migrated UI (all classes are scoped under `.cb-scope`):
+
+**Shells and regions**
 
 - `.cb-workspace`: full analytical screen;
 - `.cb-workspace-head`: screen title/metrics/tool heading;
-- `.cb-surface`: standard analysis panel;
-- `.cb-surface-raised`: emphasized analysis panel;
+- `.cb-surface` / `.cb-card` (+`.cb-card-pad`): standard analysis panel / inner tile;
 - `.cb-modal-backdrop`: full-screen modal layer;
-- `.cb-dossier`: modal/drawer shell;
-- `.cb-dossier-head`: modal/drawer header;
-- `.cb-dossier-body`: scrollable content region;
-- `.cb-dossier-foot`: sticky action row;
-- `.cb-eyebrow`: operational section label;
-- `.cb-control`: input/select/textarea treatment;
-- `.cb-btn`, `.cb-btn-primary`, `.cb-btn-danger`: action hierarchy;
-- `.cb-status`: compact labeled state;
-- `.cb-metric`: analytical metric tile.
+- `.cb-dossier`: modal/drawer shell (red top edge + paper grain);
+- `.cb-dossier-head` / `.cb-dossier-body` / `.cb-dossier-foot`: modal regions;
+- `.cb-drawer`: right-docked dossier drawer.
 
-Existing Tailwind utilities may remain for layout and state-specific color, but shared classes own the visual material and interaction finish.
+**Controls**
+
+- `.cb-btn`, `.cb-btn-primary`, `.cb-btn-ghost`, `.cb-btn-danger`, `.cb-btn-sm`, `.cb-btn-icon`: action hierarchy;
+- `.cb-field-label`, `.cb-input`, `.cb-select`, `.cb-textarea`: form treatment;
+- `.cb-tabs` + `.cb-tab` (`.active`): segmented control.
+
+**Content**
+
+- `.cb-eyebrow`: operational section label;
+- `.cb-list` + `.cb-row` (`.selected`) with `.cb-row-icon`, `.cb-row-main`, `.cb-row-title`, `.cb-row-sub`: selectable rows;
+- `.cb-badge`, `.cb-badge-red`, `.cb-badge-amber`, `.cb-badge-green`, `.cb-badge-cobalt`: compact labeled state;
+- `.cb-alert` (`.cb-alert-red/-amber/-green/-cobalt`): status banner;
+- `.cb-progress` > `span`: meter bars;
+- `.cb-metric`: analytical metric tile;
+- `.cb-empty` + `.cb-empty-icon`: empty states;
+- `.cb-paper-sheet`: aged-paper surface for document/report previews;
+- `.cb-divider`, `.cb-scroll`, `.cb-kbd`;
+- text helpers: `.cb-mono`, `.cb-dim`, `.cb-faint`, `.cb-red`, `.cb-amber`, `.cb-green`, `.cb-cobalt`.
+
+Existing Tailwind utilities may remain for layout (flex/grid/spacing/sizing), but shared classes own the visual material and interaction finish. Use `noir-*`, `crimson`, `amber-accent`, and `cobalt` tokens only — never the default Tailwind palette (zinc, slate, blue, emerald, violet, etc.).
 
 Do not fork new color tokens or modal shells inside individual components.
 

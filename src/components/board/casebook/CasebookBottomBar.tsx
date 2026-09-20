@@ -145,7 +145,10 @@ export const CasebookBottomBar: React.FC<CasebookBottomBarProps> = ({
           className="bpill"
           id="boardBtn"
           style={activeView === 'board' ? activePillStyle : undefined}
-          onClick={() => onSelectView('board')}
+          onClick={() => {
+            setOpenPop(null);
+            onSelectView('board');
+          }}
         >
           <svg
             viewBox="0 0 24 24"
@@ -182,7 +185,10 @@ export const CasebookBottomBar: React.FC<CasebookBottomBarProps> = ({
           className="bpill"
           id="graphBtn"
           style={activeView === 'graph' ? activePillStyle : undefined}
-          onClick={() => onSelectView('graph')}
+          onClick={() => {
+            setOpenPop(null);
+            onSelectView('graph');
+          }}
         >
           <svg
             viewBox="0 0 24 24"
@@ -201,7 +207,10 @@ export const CasebookBottomBar: React.FC<CasebookBottomBarProps> = ({
           className="bpill"
           id="anomaliesBtn"
           style={activeView === 'patterns' ? activePillStyle : undefined}
-          onClick={() => onSelectView('patterns')}
+          onClick={() => {
+            setOpenPop(null);
+            onSelectView('patterns');
+          }}
         >
           <svg
             viewBox="0 0 24 24"

@@ -12,25 +12,25 @@ interface AuditLogModalProps {
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  case_created: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
-  case_updated: 'bg-noir-850 text-noir-300 border border-noir-700',
-  case_deleted: 'bg-crimson/20 text-crimson border border-crimson/40',
-  entity_created: 'bg-cobalt/20 text-cobalt border border-cobalt/40',
-  entity_updated: 'bg-noir-850 text-noir-300 border border-noir-700',
-  entity_deleted: 'bg-crimson/20 text-crimson border border-crimson/40',
-  entities_merged: 'bg-amber-accent/15 text-amber-accent border border-amber-accent/35',
-  relationship_created: 'bg-cobalt/20 text-cobalt border border-cobalt/40',
-  relationship_confirmed: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
-  relationship_deleted: 'bg-crimson/20 text-crimson border border-crimson/40',
-  document_ingested: 'bg-cobalt/20 text-cobalt border border-cobalt/40',
-  ai_extraction_approved: 'bg-amber-accent/15 text-amber-accent border border-amber-accent/35',
-  report_generated: 'bg-noir-850 text-noir-300 border border-noir-700',
-  link_prediction_confirmed: 'bg-amber-accent/15 text-amber-accent border border-amber-accent/35',
-  bundle_exported: 'bg-noir-850 text-noir-300 border border-noir-700',
-  bundle_imported: 'bg-emerald-950 text-emerald-400 border border-emerald-800',
-  intel_triaged: 'bg-noir-850 text-noir-300 border border-noir-700',
-  intel_promoted: 'bg-amber-accent/15 text-amber-accent border border-amber-accent/35',
-  sos_dispatched: 'bg-crimson text-white',
+  case_created: 'cb-badge cb-badge-green',
+  case_updated: 'cb-badge',
+  case_deleted: 'cb-badge cb-badge-red',
+  entity_created: 'cb-badge cb-badge-cobalt',
+  entity_updated: 'cb-badge',
+  entity_deleted: 'cb-badge cb-badge-red',
+  entities_merged: 'cb-badge cb-badge-amber',
+  relationship_created: 'cb-badge cb-badge-cobalt',
+  relationship_confirmed: 'cb-badge cb-badge-green',
+  relationship_deleted: 'cb-badge cb-badge-red',
+  document_ingested: 'cb-badge cb-badge-cobalt',
+  ai_extraction_approved: 'cb-badge cb-badge-amber',
+  report_generated: 'cb-badge',
+  link_prediction_confirmed: 'cb-badge cb-badge-amber',
+  bundle_exported: 'cb-badge',
+  bundle_imported: 'cb-badge cb-badge-green',
+  intel_triaged: 'cb-badge',
+  intel_promoted: 'cb-badge cb-badge-amber',
+  sos_dispatched: 'cb-badge cb-badge-red',
 };
 
 export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, caseId, onClose }) => {
@@ -59,35 +59,33 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, caseId, on
   if (!isOpen) return null;
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier w-full max-w-3xl max-h-[85vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
+        <div className="cb-dossier-head flex items-center justify-between px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <History className="w-5 h-5 text-amber-accent" />
+            <History className="w-5 h-5 text-amber-accent flex-shrink-0" />
             <div>
-              <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
-                Investigative Audit Trail & Chain of Custody
-              </h2>
-              <p className="text-[11px] text-noir-400">
+              <h2 className="text-sm font-bold">Investigative Audit Trail & Chain of Custody</h2>
+              <p className="text-[11px] cb-dim">
                 Immutable record of all investigator actions, evidence additions, merges, AI approvals, imports and
                 escalations.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon" title="Close audit trail">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Filter bar */}
-        <div className="flex items-center justify-between px-6 py-2.5 bg-noir-950/80 border-b border-noir-800">
+        {/* Filter strip */}
+        <div className="flex items-center justify-between px-5 py-2.5 border-b border-noir-700">
           <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-noir-500" />
+            <Filter className="w-3.5 h-3.5 cb-faint" />
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              className="bg-noir-900 border border-noir-700 rounded px-2 py-1 text-noir-200 focus:outline-none"
+              className="cb-select !w-auto"
             >
               <option value="all">All actions ({logs.length})</option>
               {availableActions.map((a) => (
@@ -97,38 +95,39 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, caseId, on
               ))}
             </select>
           </div>
-          <span className="text-[10px] text-noir-500">
+          <span className="cb-mono text-[10px] cb-faint">
             {filtered.length} entr{filtered.length === 1 ? 'y' : 'ies'} displayed
           </span>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        <div className="cb-dossier-body cb-scroll flex-1 overflow-y-auto p-5 space-y-2.5">
           {logs.length === 0 ? (
-            <div className="p-8 text-center text-noir-400">
-              No audit actions recorded for this case yet. Every create, edit, merge, ingestion, AI approval, import
-              and SOS dispatch will appear here.
+            <div className="cb-empty">
+              <div className="cb-empty-icon">
+                <History className="w-5 h-5" />
+              </div>
+              <p className="text-xs cb-dim max-w-md">
+                No audit actions recorded for this case yet. Every create, edit, merge, ingestion, AI approval, import
+                and SOS dispatch will appear here.
+              </p>
             </div>
           ) : (
             filtered.map((log) => (
               <div
                 key={log.id}
-                className="p-3 bg-noir-950 border border-noir-800 rounded-lg flex items-start justify-between gap-3"
+                className="cb-card cb-card-pad flex items-start justify-between gap-3"
               >
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase whitespace-nowrap ${
-                        SEVERITY_STYLES[log.action] || 'bg-noir-850 text-noir-300 border border-noir-700'
-                      }`}
-                    >
+                    <span className={SEVERITY_STYLES[log.action] || 'cb-badge'}>
                       {log.action.replace(/_/g, ' ')}
                     </span>
-                    <span className="text-noir-100 font-bold break-words">{log.details}</span>
+                    <span className="text-noir-100 font-bold text-xs break-words">{log.details}</span>
                   </div>
-                  <div className="text-[10px] text-noir-400 flex items-center gap-3">
+                  <div className="cb-mono text-[10px] cb-faint flex items-center gap-3">
                     <span className="flex items-center gap-1">
-                      <User className="w-3 h-3 text-noir-500" /> {log.investigator || 'System'}
+                      <User className="w-3 h-3" /> {log.investigator || 'System'}
                     </span>
                     <span>
                       Target: {log.targetType.toUpperCase()} ({log.targetId})
@@ -136,13 +135,21 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, caseId, on
                   </div>
                 </div>
 
-                <span className="text-[10px] text-noir-500 flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
+                <span className="cb-mono text-[10px] cb-faint flex items-center gap-1 flex-shrink-0 whitespace-nowrap">
                   <Clock className="w-3 h-3" />
                   {new Date(log.timestamp).toLocaleString()}
                 </span>
               </div>
             ))
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="cb-dossier-foot flex items-center justify-between px-5 py-2.5 cb-mono text-[10px] cb-faint">
+          <span>Append-only record — audit entries cannot be edited or removed</span>
+          <span>
+            {filtered.length} of {logs.length} entries
+          </span>
         </div>
       </div>
     </div>

@@ -126,6 +126,7 @@ export interface BoardItem {
   title: string;
   ropes: RopeLike[];
   baseZ: number;
+  stackOrder: number;
   hoverLift: number;
   dragLift: number;
   target: THREE.Vector3;

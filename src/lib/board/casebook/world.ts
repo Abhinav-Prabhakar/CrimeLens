@@ -207,6 +207,7 @@ export function createWorld(opts: {
   lamp.castShadow = true;
   lamp.shadow.mapSize.set(2048, 2048);
   lamp.shadow.bias = -0.00035;
+  lamp.shadow.normalBias = 0.05;
   lamp.shadow.camera.near = 20;
   lamp.shadow.camera.far = 280;
   scene.add(lamp);
@@ -332,9 +333,7 @@ export function createWorld(opts: {
       roughness: 0.88,
       metalness: 0,
       side: THREE.DoubleSide,
-      polygonOffset: true,
-      polygonOffsetFactor: -1 - stackOrder,
-      polygonOffsetUnits: -4 - stackOrder * 4,
+      depthWrite: false,
     });
     const paper = new THREE.Mesh(
       bentPaperGeo(w, h, spec.curl != null ? spec.curl : card.curl),
@@ -342,7 +341,6 @@ export function createWorld(opts: {
     );
     paper.castShadow = true;
     paper.receiveShadow = true;
-    paper.renderOrder = 10 + stackOrder;
     grp.add(paper);
     const glow = new THREE.Mesh(
       new THREE.PlaneGeometry(w + 1.4, h + 1.4),
@@ -355,13 +353,9 @@ export function createWorld(opts: {
       }),
     );
     glow.position.z = -0.09;
-    glow.renderOrder = stackOrder;
     grp.add(glow);
     const pin = makePin(PIN_COLORS[spec.type] ?? 0xb01722);
     pin.position.set(0, h / 2 - 0.7, 0.12);
-    pin.traverse((object) => {
-      object.renderOrder = 100 + stackOrder;
-    });
     grp.add(pin);
     grp.position.set(
       Number.isFinite(spec.x) ? spec.x : 0,
@@ -386,6 +380,7 @@ export function createWorld(opts: {
       title: spec.title || '',
       ropes: [],
       baseZ: PAPER_Z + stackOrder * 0.006,
+      stackOrder,
       hoverLift: 0,
       dragLift: 0,
       target: new THREE.Vector3().copy(grp.position),
@@ -401,6 +396,7 @@ export function createWorld(opts: {
     grp.userData.item = it;
     paper.userData.item = it;
     pinHead(it).userData.item = it;
+    applyOrder(it, it.stackOrder * 10);
     scene.add(grp);
     items.push(it);
     itemById.set(it.id, it);
@@ -418,6 +414,16 @@ export function createWorld(opts: {
     gsap.to(it, { dragLift: 0, duration: 0.7, ease: 'power3.out' });
     applyFilterTo(it);
     return it;
+  }
+
+  /** Cards never write depth — painter order decides overlap, so bent
+   *  papers can never z-fight. `base` lets drags lift above the stack. */
+  function applyOrder(it: BoardItem, base: number) {
+    it.glow.renderOrder = base;
+    it.paper.renderOrder = base + 1;
+    it.pin.traverse((o) => {
+      o.renderOrder = base + 2;
+    });
   }
 
   function swapMap(it: BoardItem, cv: HTMLCanvasElement) {
@@ -742,6 +748,7 @@ export function createWorld(opts: {
       grabOff.z = 0;
       group.forEach((g) => {
         g.dragLift = 1.15;
+        applyOrder(g, 500 + g.stackOrder * 10);
         g.ropes.forEach((r) => r.hold(true));
       });
       stage.classList.add('dragging');
@@ -846,6 +853,7 @@ export function createWorld(opts: {
       dragStarts = null;
       starts.forEach(({ it: g }) => {
         g.dragLift = 0;
+        applyOrder(g, g.stackOrder * 10);
         g.ropes.forEach((r) => r.hold(false));
       });
       if (!moved) {

@@ -165,85 +165,70 @@ ${relationships
   };
 
   return (
-    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="cb-dossier w-full max-w-4xl max-h-[90vh] bg-noir-900 border border-noir-700 rounded-xl shadow-2xl flex flex-col font-mono text-xs text-noir-200 overflow-hidden">
+    <div className="cb-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="cb-dossier w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="cb-dossier-head flex items-center justify-between px-6 py-4 bg-noir-850 border-b border-noir-700">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-5 h-5 text-amber-accent" />
+        <div className="cb-dossier-head flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <FileText className="w-5 h-5 text-amber-accent flex-none" />
             <div>
+              <div className="cb-eyebrow">Case File Documentation</div>
               <h2 className="text-sm font-bold text-noir-100 uppercase tracking-wider">
                 Investigative Reports & FIR Drafting Assistance
               </h2>
-              <p className="text-[11px] text-noir-400">
+              <p className="text-[11px] cb-dim mt-0.5">
                 Generate structured case briefs, network intelligence reports, and statutory FIR drafting aids.
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-noir-400 hover:text-noir-100">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="cb-btn cb-btn-ghost cb-btn-icon flex-none" title="Close">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Tabs Bar */}
-        <div className="flex items-center gap-2 px-6 py-2.5 bg-noir-950/80 border-b border-noir-800">
-          <button
-            onClick={() => setReportType('dossier')}
-            className={`px-3 py-1.5 rounded font-bold transition-colors ${
-              reportType === 'dossier'
-                ? 'bg-crimson text-white'
-                : 'bg-noir-800 text-noir-400 hover:text-noir-200'
-            }`}
-          >
-            Comprehensive Case Dossier
-          </button>
-          <button
-            onClick={() => setReportType('fir')}
-            className={`px-3 py-1.5 rounded font-bold transition-colors ${
-              reportType === 'fir'
-                ? 'bg-crimson text-white'
-                : 'bg-noir-800 text-noir-400 hover:text-noir-200'
-            }`}
-          >
-            FIR Draft Assistance
-          </button>
-          <button
-            onClick={() => setReportType('network')}
-            className={`px-3 py-1.5 rounded font-bold transition-colors ${
-              reportType === 'network'
-                ? 'bg-crimson text-white'
-                : 'bg-noir-800 text-noir-400 hover:text-noir-200'
-            }`}
-          >
-            Network Analysis Summary
-          </button>
+        {/* Report Type Tabs */}
+        <div className="px-6 py-3 border-b border-noir-700">
+          <div className="cb-tabs">
+            <button
+              onClick={() => setReportType('dossier')}
+              className={`cb-tab ${reportType === 'dossier' ? 'active' : ''}`}
+            >
+              Comprehensive Case Dossier
+            </button>
+            <button
+              onClick={() => setReportType('fir')}
+              className={`cb-tab ${reportType === 'fir' ? 'active' : ''}`}
+            >
+              FIR Draft Assistance
+            </button>
+            <button
+              onClick={() => setReportType('network')}
+              className={`cb-tab ${reportType === 'network' ? 'active' : ''}`}
+            >
+              Network Analysis Summary
+            </button>
+          </div>
         </div>
 
-        {/* Report Preview */}
-        <div className="flex-1 overflow-y-auto p-6 bg-noir-950">
-          <pre className="cb-paper-sheet p-4 bg-noir-900 border border-noir-800 rounded-lg text-noir-200 text-[11px] font-mono leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
+        {/* Report Preview — typed case-file on aged paper */}
+        <div className="cb-dossier-body cb-scroll flex-1 overflow-y-auto p-6">
+          <pre className="cb-paper-sheet p-5 text-[11px] font-mono leading-relaxed whitespace-pre-wrap selection:bg-crimson selection:text-white">
             {reportText}
           </pre>
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between px-6 py-4 bg-noir-850 border-t border-noir-700">
-          <span className="text-noir-500 text-[10px]">
+        <div className="cb-dossier-foot flex items-center justify-between px-6 py-4">
+          <span className="cb-faint cb-mono text-[10px] uppercase tracking-wider">
             Export format: Standard Markdown / Printable Text
           </span>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleCopy}
-              className="px-4 py-2 bg-noir-800 hover:bg-noir-700 text-noir-200 rounded font-bold flex items-center gap-2 transition-colors"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+          <div className="flex items-center gap-2.5">
+            <button onClick={handleCopy} className="cb-btn cb-btn-ghost">
+              {copied ? <Check className="w-3.5 h-3.5 cb-green" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? 'Copied to Clipboard' : 'Copy Text'}
             </button>
-            <button
-              onClick={handleDownload}
-              className="px-4 py-2 bg-crimson hover:bg-crimson-bright text-white rounded font-bold flex items-center gap-2 transition-colors"
-            >
-              <Download className="w-4 h-4" /> Download .md
+            <button onClick={handleDownload} className="cb-btn cb-btn-primary">
+              <Download className="w-3.5 h-3.5" /> Download .md
             </button>
           </div>
         </div>
