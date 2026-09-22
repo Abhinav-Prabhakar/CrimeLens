@@ -1,18 +1,40 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
+import { InvestigationEntity, InvestigationRelationship, EntityType } from '@/lib/types/investigation';
 import { GraphEngine, GraphPathResult } from '@/lib/graph/algorithms';
 import { detectCommunities } from '@/lib/graph/louvain';
 import { predictMissingLinks, PredictedLink } from '@/lib/graph/linkPrediction';
 import { Search, Route, Share2, Sparkles, ShieldAlert, ZoomIn, ZoomOut, Crosshair } from 'lucide-react';
+import type { BoardTool, ThreadColorId } from '@/lib/board/casebook/types';
+import { THREAD_COLOR_HEX } from '@/lib/board/casebook/types';
+
+/** Mirror of the corkboard WorldApi so the shared chrome can drive either representation. */
+export interface GraphViewApi {
+  zoomIn(): void;
+  zoomOut(): void;
+  center(): void;
+  focusItem(id: string): void;
+  /** view-center in board coordinates — where a quick-added card lands */
+  getSpawnPoint(): { x: number; y: number };
+}
 
 interface KnowledgeGraphViewProps {
   entities: InvestigationEntity[];
   relationships: InvestigationRelationship[];
   selectedEntityId: string | null;
+  selectedEntityIds: string[];
+  activeTool: BoardTool;
+  threadColor: ThreadColorId;
   filterTypes: Record<string, boolean>;
-  onSelectEntity: (id: string | null) => void;
+  paused: boolean;
+  apiRef: React.MutableRefObject<GraphViewApi | null>;
+  onSelect(ids: string[], primaryId: string | null): void;
+  onConnect(sourceId: string, targetId: string): void;
+  onDeleteEntities(ids: string[]): void;
+  onCommitPositions(moves: { id: string; x: number; y: number }[]): void;
+  onZoomChange(pct: number): void;
+  onToolRequest(t: BoardTool): void;
   onAddPredictedLink?: (link: PredictedLink) => void;
 }
 
@@ -26,6 +48,27 @@ const COMMUNITY_COLORS = [
   '#ea580c', // Orange
 ];
 
+/** Evidence-status coloring — the default node semantics (design.md §9.2). */
+const STATUS_COLORS: Record<string, string> = {
+  verified_source: '#4a8a5a',
+  investigator_confirmed: '#4a8a5a',
+  ai_inferred: '#d9a520',
+  predicted: '#d9a520',
+  unverified: '#8d867c',
+};
+
+const ENTITY_TYPE_COLORS: Record<EntityType, string> = {
+  person: '#e13c32',
+  organization: '#2f5f9e',
+  location: '#4a8a5a',
+  vehicle: '#c9a76a',
+  phone: '#d9a520',
+  account: '#a8823c',
+  document: '#d8d0be',
+  event: '#8c2620',
+  evidence_item: '#8a5a20',
+};
+
 interface SimNode {
   id: string;
   x: number;
@@ -35,12 +78,29 @@ interface SimNode {
   pinned: boolean;
 }
 
+interface MarqueeRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
 export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   entities,
   relationships,
   selectedEntityId,
+  selectedEntityIds,
+  activeTool,
+  threadColor,
   filterTypes,
-  onSelectEntity,
+  paused,
+  apiRef,
+  onSelect,
+  onConnect,
+  onDeleteEntities,
+  onCommitPositions,
+  onZoomChange,
+  onToolRequest,
   onAddPredictedLink,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,8 +111,9 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   const [targetPathId, setTargetPathId] = useState<string>('');
   const [pathResult, setPathResult] = useState<GraphPathResult | null>(null);
   const [showPredictions, setShowPredictions] = useState<boolean>(false);
-  const [colorMode, setColorMode] = useState<'community' | 'type' | 'centrality'>('community');
+  const [colorMode, setColorMode] = useState<'status' | 'community' | 'type' | 'centrality'>('status');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
 
   // Filtered projection — the graph honors the same evidence filters as the board
   const visibleEntities = useMemo(
@@ -85,17 +146,41 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
   const nodesRef = useRef<Map<string, SimNode>>(new Map());
   const alphaRef = useRef(1);
   const viewRef = useRef({ x: 0, y: 0, k: 1 });
-  const dragRef = useRef<{ nodeId: string | null; panning: boolean; lastX: number; lastY: number }>({
+  const dragRef = useRef<{
+    nodeId: string | null;
+    panning: boolean;
+    moved: boolean;
+    connectSourceId: string | null;
+    connectX: number;
+    connectY: number;
+    lasso: boolean;
+    lastX: number;
+    lastY: number;
+  }>({
     nodeId: null,
     panning: false,
+    moved: false,
+    connectSourceId: null,
+    connectX: 0,
+    connectY: 0,
+    lasso: false,
     lastX: 0,
     lastY: 0,
   });
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const toolRef = useRef(activeTool);
+  toolRef.current = activeTool;
+  const threadColorRef = useRef(threadColor);
+  threadColorRef.current = threadColor;
+  const marqueeRef = useRef<MarqueeRect | null>(null);
+
   // Latest render inputs for the animation loop
   const renderRef = useRef({
     visibleEntities,
     visibleRelationships,
     selectedEntityId,
+    selectedEntityIds,
     pathResult,
     showPredictions,
     colorMode,
@@ -109,6 +194,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     visibleEntities,
     visibleRelationships,
     selectedEntityId,
+    selectedEntityIds,
     pathResult,
     showPredictions,
     colorMode,
@@ -118,6 +204,9 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     degreeCentrality,
     predictedLinks,
   };
+
+  const cbRef = useRef({ onSelect, onConnect, onDeleteEntities, onCommitPositions, onZoomChange, onToolRequest });
+  cbRef.current = { onSelect, onConnect, onDeleteEntities, onCommitPositions, onZoomChange, onToolRequest };
 
   const invalidatePath = useCallback(() => setPathResult(null), []);
 
@@ -144,14 +233,115 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     alphaRef.current = 1;
   }, [visibleEntities]);
 
-  const nodeRadius = useCallback(
-    (id: string) => {
-      const cent = renderRef.current.betweenness[id] || 0;
-      const deg = renderRef.current.degreeCentrality.totalDegree[id] || 0;
-      return Math.max(7, 9 + cent * 38 + Math.min(deg, 6));
+  const nodeRadius = useCallback((id: string) => {
+    const cent = renderRef.current.betweenness[id] || 0;
+    const deg = renderRef.current.degreeCentrality.totalDegree[id] || 0;
+    return Math.max(7, 9 + cent * 38 + Math.min(deg, 6));
+  }, []);
+
+  const toWorldCoords = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const view = viewRef.current;
+    return {
+      x: (clientX - rect.left - view.x) / view.k,
+      y: (clientY - rect.top - view.y) / view.k,
+    };
+  }, []);
+
+  const hitTest = useCallback(
+    (wx: number, wy: number): string | null => {
+      for (const ent of renderRef.current.visibleEntities) {
+        const pos = nodesRef.current.get(ent.id);
+        if (!pos) continue;
+        if (Math.hypot(pos.x - wx, pos.y - wy) <= nodeRadius(ent.id) + 5) return ent.id;
+      }
+      return null;
     },
-    []
+    [nodeRadius]
   );
+
+  const reportZoom = useCallback(() => {
+    cbRef.current.onZoomChange(Math.round(viewRef.current.k * 100));
+  }, []);
+
+  // Re-report zoom when this representation becomes visible again
+  useEffect(() => {
+    if (!paused) reportZoom();
+  }, [paused, reportZoom]);
+
+  const zoomAt = useCallback(
+    (factor: number, cx?: number, cy?: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = cx ?? rect.width / 2;
+      const my = cy ?? rect.height / 2;
+      const view = viewRef.current;
+      const newK = Math.max(0.25, Math.min(4, view.k * factor));
+      view.x = mx - ((mx - view.x) * newK) / view.k;
+      view.y = my - ((my - view.y) * newK) / view.k;
+      view.k = newK;
+      reportZoom();
+    },
+    [reportZoom]
+  );
+
+  const resetView = useCallback(() => {
+    viewRef.current = { x: 0, y: 0, k: 1 };
+    reportZoom();
+  }, [reportZoom]);
+
+  // Chrome drives this representation through the same contract as the corkboard.
+  useEffect(() => {
+    apiRef.current = {
+      zoomIn: () => zoomAt(1.25),
+      zoomOut: () => zoomAt(1 / 1.25),
+      center: resetView,
+      focusItem: (id) => {
+        const n = nodesRef.current.get(id);
+        const c = containerRef.current;
+        if (!n || !c) return;
+        const view = viewRef.current;
+        view.x = c.clientWidth / 2 - n.x * view.k;
+        view.y = c.clientHeight / 2 - n.y * view.k;
+      },
+      getSpawnPoint: () => {
+        const c = containerRef.current;
+        const w = c?.clientWidth || 900;
+        const h = c?.clientHeight || 600;
+        const view = viewRef.current;
+        const wx = (w / 2 - view.x) / view.k;
+        const wy = (h / 2 - view.y) / view.k;
+        // inverse of the boardPosition → sim-coordinate seeding
+        return { x: (wx - w / 2) / 10, y: (wy - h / 2) / 8 };
+      },
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef, zoomAt, resetView]);
+
+  // Delete/Backspace removes the current selection, same as the corkboard.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (pausedRef.current) return;
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const ids = renderRef.current.selectedEntityIds.length
+        ? renderRef.current.selectedEntityIds
+        : renderRef.current.selectedEntityId
+          ? [renderRef.current.selectedEntityId]
+          : [];
+      if (ids.length) {
+        e.preventDefault();
+        cbRef.current.onDeleteEntities(ids);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // ---- Simulation + render loop ----
   useEffect(() => {
@@ -236,6 +426,16 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
       alphaRef.current = Math.max(0, alpha * 0.985);
     }
 
+    function nodeColor(ent: InvestigationEntity, r: typeof renderRef.current): string {
+      if (r.colorMode === 'status') return STATUS_COLORS[ent.status] || '#8d867c';
+      if (r.colorMode === 'community') {
+        return COMMUNITY_COLORS[(r.communities.communities[ent.id] ?? 0) % COMMUNITY_COLORS.length];
+      }
+      if (r.colorMode === 'type') return ENTITY_TYPE_COLORS[ent.type] || '#8d867c';
+      const normDeg = r.degreeCentrality.normalizedDegree[ent.id] || 0;
+      return normDeg > 0.4 ? '#e13c32' : normDeg > 0.2 ? '#d9a520' : '#2f5f9e';
+    }
+
     function draw(w: number, h: number) {
       const r = renderRef.current;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -248,6 +448,8 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
 
       const pathNodes = new Set(r.pathResult?.path || []);
       const pathRelIds = new Set(r.pathResult?.relationships.map((x) => x.id) || []);
+      const selected = new Set(r.selectedEntityIds);
+      if (r.selectedEntityId) selected.add(r.selectedEntityId);
 
       // 1. Edges
       for (const rel of r.visibleRelationships) {
@@ -256,18 +458,17 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
         if (!p1 || !p2) continue;
 
         const isPathEdge = pathRelIds.has(rel.id);
-        const touched =
-          r.selectedEntityId === rel.sourceId || r.selectedEntityId === rel.targetId;
+        const touched = selected.has(rel.sourceId) || selected.has(rel.targetId);
         ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
         ctx.strokeStyle = isPathEdge
           ? '#ff4d42'
           : touched
-          ? 'rgba(225, 60, 50, 0.55)'
-          : rel.status === 'ai_inferred' || rel.status === 'predicted'
-          ? 'rgba(217, 165, 32, 0.35)'
-          : 'rgba(141, 134, 124, 0.25)';
+            ? 'rgba(225, 60, 50, 0.55)'
+            : rel.status === 'ai_inferred' || rel.status === 'predicted'
+              ? 'rgba(217, 165, 32, 0.35)'
+              : 'rgba(141, 134, 124, 0.25)';
         ctx.lineWidth = isPathEdge ? 3.5 : touched ? 2 : 1.2;
         ctx.setLineDash(rel.status === 'predicted' ? [5, 4] : []);
         ctx.stroke();
@@ -305,34 +506,45 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
         }
       }
 
-      // 3. Nodes
+      // 3. In-progress connect thread (connect tool drag)
+      if (dragRef.current.connectSourceId) {
+        const src = nodesRef.current.get(dragRef.current.connectSourceId);
+        if (src) {
+          ctx.beginPath();
+          ctx.setLineDash([6, 4]);
+          ctx.moveTo(src.x, src.y);
+          ctx.lineTo(dragRef.current.connectX, dragRef.current.connectY);
+          ctx.strokeStyle = `#${(THREAD_COLOR_HEX[threadColorRef.current] ?? 0xb01722)
+            .toString(16)
+            .padStart(6, '0')}`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+
+      // 4. Nodes
       const search = r.searchQuery.trim().toLowerCase();
       for (const ent of r.visibleEntities) {
         const pos = nodesRef.current.get(ent.id);
         if (!pos) continue;
 
-        const isSelected = r.selectedEntityId === ent.id;
+        const isSelected = selected.has(ent.id);
         const isPathNode = pathNodes.has(ent.id);
         const isSearchMatch = search.length > 0 && ent.label.toLowerCase().includes(search);
+        const isConnectSource = dragRef.current.connectSourceId === ent.id;
 
-        const radius = Math.max(7, 9 + (r.betweenness[ent.id] || 0) * 38 + Math.min(r.degreeCentrality.totalDegree[ent.id] || 0, 6));
-
-        let nodeColor = '#8d867c';
-        if (r.colorMode === 'community') {
-          nodeColor = COMMUNITY_COLORS[(r.communities.communities[ent.id] ?? 0) % COMMUNITY_COLORS.length];
-        } else if (r.colorMode === 'type') {
-          nodeColor = ent.type === 'person' ? '#e13c32' : ent.type === 'organization' ? '#2f5f9e' : '#d9a520';
-        } else if (r.colorMode === 'centrality') {
-          const normDeg = r.degreeCentrality.normalizedDegree[ent.id] || 0;
-          nodeColor = normDeg > 0.4 ? '#e13c32' : normDeg > 0.2 ? '#d9a520' : '#2f5f9e';
-        }
+        const radius = Math.max(
+          7,
+          9 + (r.betweenness[ent.id] || 0) * 38 + Math.min(r.degreeCentrality.totalDegree[ent.id] || 0, 6)
+        );
 
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = nodeColor;
+        ctx.fillStyle = nodeColor(ent, r);
         ctx.fill();
 
-        if (isSelected || isPathNode || isSearchMatch) {
+        if (isSelected || isPathNode || isSearchMatch || isConnectSource) {
           ctx.lineWidth = 3;
           ctx.strokeStyle = isPathNode ? '#ff4d42' : '#ffffff';
           ctx.stroke();
@@ -359,8 +571,10 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     function loop() {
       if (disposed) return;
       frameId = requestAnimationFrame(loop);
+      if (pausedRef.current) return;
       const w = container?.clientWidth ?? 900;
       const h = container?.clientHeight ?? 600;
+      if (w === 0 || h === 0) return;
 
       // DPR-aware sizing
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -383,117 +597,168 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Pointer interaction: node drag, pan, click-select ----
-  const toWorldCoords = useCallback((clientX: number, clientY: number) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    const view = viewRef.current;
-    return {
-      x: (clientX - rect.left - view.x) / view.k,
-      y: (clientY - rect.top - view.y) / view.k,
-    };
-  }, []);
+  // ---- Pointer interaction: tool-aware (select / lasso / connect / pan) ----
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (paused) return;
     const { x, y } = toWorldCoords(e.clientX, e.clientY);
-    let hitId: string | null = null;
-    for (const ent of visibleEntities) {
-      const pos = nodesRef.current.get(ent.id);
-      if (!pos) continue;
-      const radius = nodeRadius(ent.id);
-      if (Math.hypot(pos.x - x, pos.y - y) <= radius + 5) {
-        hitId = ent.id;
-        break;
+    const hitId = hitTest(x, y);
+    const d = dragRef.current;
+    d.moved = false;
+    d.lastX = e.clientX;
+    d.lastY = e.clientY;
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    if (toolRef.current === 'connect') {
+      if (hitId) {
+        d.connectSourceId = hitId;
+        d.connectX = x;
+        d.connectY = y;
+      } else {
+        d.panning = true;
       }
+      return;
     }
-    if (hitId) {
-      dragRef.current.nodeId = hitId;
+
+    if (toolRef.current === 'lasso') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      marqueeRef.current = {
+        x0: e.clientX - rect.left,
+        y0: e.clientY - rect.top,
+        x1: e.clientX - rect.left,
+        y1: e.clientY - rect.top,
+      };
+      d.lasso = true;
+      setMarquee(marqueeRef.current);
+      return;
+    }
+
+    if (hitId && toolRef.current !== 'pan') {
+      d.nodeId = hitId;
       const node = nodesRef.current.get(hitId)!;
       node.pinned = true;
       alphaRef.current = Math.max(alphaRef.current, 0.3);
     } else {
-      dragRef.current.panning = true;
-      dragRef.current.lastX = e.clientX;
-      dragRef.current.lastY = e.clientY;
+      d.panning = true;
     }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (dragRef.current.nodeId) {
+    const d = dragRef.current;
+    const dx = e.clientX - d.lastX;
+    const dy = e.clientY - d.lastY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) d.moved = true;
+
+    if (d.connectSourceId) {
       const { x, y } = toWorldCoords(e.clientX, e.clientY);
-      const node = nodesRef.current.get(dragRef.current.nodeId);
+      d.connectX = x;
+      d.connectY = y;
+      return;
+    }
+    if (d.lasso) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      marqueeRef.current = {
+        ...marqueeRef.current!,
+        x1: e.clientX - rect.left,
+        y1: e.clientY - rect.top,
+      };
+      setMarquee(marqueeRef.current);
+      return;
+    }
+    if (d.nodeId) {
+      const { x, y } = toWorldCoords(e.clientX, e.clientY);
+      const node = nodesRef.current.get(d.nodeId);
       if (node) {
         node.x = x;
         node.y = y;
         node.vx = 0;
         node.vy = 0;
       }
-    } else if (dragRef.current.panning) {
-      viewRef.current.x += e.clientX - dragRef.current.lastX;
-      viewRef.current.y += e.clientY - dragRef.current.lastY;
-      dragRef.current.lastX = e.clientX;
-      dragRef.current.lastY = e.clientY;
+    } else if (d.panning) {
+      viewRef.current.x += dx;
+      viewRef.current.y += dy;
+      d.lastX = e.clientX;
+      d.lastY = e.clientY;
     }
   };
 
-  const pannedSincePointerDownRef = useRef(false);
-  const nodeDraggedRef = useRef(false);
+  const commitNodePosition = (nodeId: string) => {
+    const node = nodesRef.current.get(nodeId);
+    const c = containerRef.current;
+    if (!node || !c) return;
+    const w = c.clientWidth || 900;
+    const h = c.clientHeight || 600;
+    // board coordinates are the persisted layout; convert sim coords back
+    cbRef.current.onCommitPositions([{ id: nodeId, x: (node.x - w / 2) / 10, y: (node.y - h / 2) / 8 }]);
+  };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (dragRef.current.nodeId) {
-      const node = nodesRef.current.get(dragRef.current.nodeId);
-      if (node) {
-        node.pinned = false;
-        onSelectEntity(dragRef.current.nodeId);
+    const d = dragRef.current;
+
+    if (d.connectSourceId) {
+      const { x, y } = toWorldCoords(e.clientX, e.clientY);
+      const targetId = hitTest(x, y);
+      if (targetId && targetId !== d.connectSourceId) {
+        cbRef.current.onConnect(d.connectSourceId, targetId);
       }
-      dragRef.current.nodeId = null;
-      // Suppress the trailing click so releasing a drag never toggles selection
-      nodeDraggedRef.current = true;
-      window.setTimeout(() => (nodeDraggedRef.current = false), 60);
-    } else if (dragRef.current.panning) {
-      dragRef.current.panning = false;
-      pannedSincePointerDownRef.current = true;
-      window.setTimeout(() => (pannedSincePointerDownRef.current = false), 60);
-      void e;
+      d.connectSourceId = null;
+      return;
+    }
+
+    if (d.lasso) {
+      const m = marqueeRef.current;
+      d.lasso = false;
+      marqueeRef.current = null;
+      setMarquee(null);
+      if (m) {
+        const view = viewRef.current;
+        const minX = Math.min(m.x0, m.x1);
+        const maxX = Math.max(m.x0, m.x1);
+        const minY = Math.min(m.y0, m.y1);
+        const maxY = Math.max(m.y0, m.y1);
+        const ids = renderRef.current.visibleEntities
+          .filter((ent) => {
+            const n = nodesRef.current.get(ent.id);
+            if (!n) return false;
+            const sx = n.x * view.k + view.x;
+            const sy = n.y * view.k + view.y;
+            return sx >= minX && sx <= maxX && sy >= minY && sy <= maxY;
+          })
+          .map((ent) => ent.id);
+        if (ids.length) cbRef.current.onSelect(ids, ids[0]);
+        else if (Math.abs(m.x1 - m.x0) < 4 && Math.abs(m.y1 - m.y0) < 4) cbRef.current.onSelect([], null);
+        cbRef.current.onToolRequest('select'); // same as the corkboard: lasso disarms after use
+      }
+      return;
+    }
+
+    if (d.nodeId) {
+      const node = nodesRef.current.get(d.nodeId);
+      if (node) node.pinned = false;
+      if (d.moved) {
+        // a real drag commits the new board position to the shared model
+        commitNodePosition(d.nodeId);
+      } else if (e.shiftKey) {
+        const ids = renderRef.current.selectedEntityIds.includes(d.nodeId)
+          ? renderRef.current.selectedEntityIds.filter((i) => i !== d.nodeId)
+          : [...renderRef.current.selectedEntityIds, d.nodeId];
+        cbRef.current.onSelect(ids, d.nodeId);
+      } else {
+        cbRef.current.onSelect([d.nodeId], d.nodeId);
+      }
+      d.nodeId = null;
+      return;
+    }
+
+    if (d.panning) {
+      d.panning = false;
+      if (!d.moved) cbRef.current.onSelect([], null); // click on empty canvas clears
     }
   };
-
-  const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (pannedSincePointerDownRef.current || nodeDraggedRef.current) return;
-    const { x, y } = toWorldCoords(e.clientX, e.clientY);
-    let clickedId: string | null = null;
-    for (const ent of visibleEntities) {
-      const pos = nodesRef.current.get(ent.id);
-      if (!pos) continue;
-      if (Math.hypot(pos.x - x, pos.y - y) <= nodeRadius(ent.id) + 5) {
-        clickedId = ent.id;
-        break;
-      }
-    }
-    if (!clickedId) onSelectEntity(null);
-  };
-
-  const zoomAt = useCallback((factor: number, cx?: number, cy?: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = cx ?? rect.width / 2;
-    const my = cy ?? rect.height / 2;
-    const view = viewRef.current;
-    const newK = Math.max(0.25, Math.min(4, view.k * factor));
-    // Zoom about the anchor point
-    view.x = mx - ((mx - view.x) * newK) / view.k;
-    view.y = my - ((my - view.y) * newK) / view.k;
-    view.k = newK;
-  }, []);
 
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, e.clientX - rect.left, e.clientY - rect.top);
-  };
-
-  const resetView = () => {
-    viewRef.current = { x: 0, y: 0, k: 1 };
   };
 
   // Shortest path computation
@@ -503,8 +768,15 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
     setPathResult(res);
   };
 
+  const cursor =
+    activeTool === 'connect' ? 'crosshair' : activeTool === 'pan' ? 'grab' : 'default';
+
   return (
-    <div ref={containerRef} className="cb-workspace kg-view relative w-full h-full flex flex-col gap-2 select-none overflow-hidden">
+    <div
+      ref={containerRef}
+      className="cb-workspace kg-view relative w-full h-full flex flex-col gap-2 select-none overflow-hidden"
+      style={{ display: paused ? 'none' : 'flex' }}
+    >
       {/* Scoped finish: spacing + compact instrument controls (margin/padding
           utilities are reset inside .cb-scope, so spacing lives here). */}
       <style>{`
@@ -516,6 +788,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
         .kg-view .kg-drawer{position:absolute;top:16px;right:16px;z-index:20;width:20rem;max-height:24rem;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:11px;color:var(--txt);}
         .kg-view .kg-pl-card{padding:8px 10px;}
         .kg-view .cb-btn.kg-on{border-color:#6e5518;color:#d9a520;background:rgba(217,165,32,0.14);}
+        .kg-view .kg-marquee{position:absolute;z-index:15;border:1px dashed var(--red);background:rgba(225,60,50,0.08);pointer-events:none;}
       `}</style>
 
       {/* Top Analytical Bar */}
@@ -602,6 +875,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
             onChange={(e: any) => setColorMode(e.target.value)}
             className="cb-select"
           >
+            <option value="status">Color: Evidence Status</option>
             <option value="community">Color: Communities</option>
             <option value="type">Color: Entity Type</option>
             <option value="centrality">Color: Centrality Heatmap</option>
@@ -632,7 +906,7 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           className="cb-input"
         />
         <span className="text-[10px] cb-faint ml-auto">
-          drag nodes • drag canvas to pan • scroll to zoom
+          drag nodes to reposition · <b>C</b> string a thread · <b>L</b> lasso · scroll to zoom
         </span>
       </div>
 
@@ -662,10 +936,23 @@ export const KnowledgeGraphView: React.FC<KnowledgeGraphViewProps> = ({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
-          onClick={handleClick}
           onWheel={handleWheel}
-          className="w-full h-full cursor-crosshair touch-none"
+          className="w-full h-full touch-none"
+          style={{ cursor }}
         />
+
+        {/* Lasso marquee overlay */}
+        {marquee && (
+          <div
+            className="kg-marquee"
+            style={{
+              left: Math.min(marquee.x0, marquee.x1),
+              top: Math.min(marquee.y0, marquee.y1),
+              width: Math.abs(marquee.x1 - marquee.x0),
+              height: Math.abs(marquee.y1 - marquee.y0),
+            }}
+          />
+        )}
 
         {/* Predictive Links Drawer Overlay */}
         {showPredictions && predictedLinks.length > 0 && (

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Share2, LayoutGrid } from 'lucide-react';
 import { useInvestigationStore } from '@/lib/store/useInvestigationStore';
 import { CasebookChrome } from '@/components/board/casebook/CasebookChrome';
 import { CasebookInspector } from '@/components/board/casebook/CasebookInspector';
@@ -13,14 +13,15 @@ import { DocumentIngestModal } from '@/components/ingestion/DocumentIngestModal'
 import { EntityResolutionModal } from '@/components/resolution/EntityResolutionModal';
 import { InvestigatorAssistantDrawer } from '@/components/assistant/InvestigatorAssistantDrawer';
 import { CaseReportModal } from '@/components/reports/CaseReportModal';
-import { PublicIntelModal } from '@/components/safety/PublicIntelModal';
 import { AnomalyPanel } from '@/components/temporal/AnomalyPanel';
 import { InvestigationTimelineView } from '@/components/temporal/InvestigationTimelineView';
 import { CaseSwitcherModal } from '@/components/board/CaseSwitcherModal';
 import { GlobalSearchModal } from '@/components/ui/GlobalSearchModal';
 import { AuditLogModal } from '@/components/ui/AuditLogModal';
 import { ImageAnalysisModal } from '@/components/board/ImageAnalysisModal';
+import type { GraphViewApi } from '@/components/graph/KnowledgeGraphView';
 import type { InvestigationEntity } from '@/lib/types/investigation';
+import { VISUAL_TYPE_DEFAULT_ENTITY } from '@/lib/types/investigation';
 import '@/components/board/casebook/casebook.css';
 
 // Dynamically import Three.js Corkboard and 2D Canvas Graph to ensure pure client-side execution
@@ -46,6 +47,7 @@ export default function CrimeLensMainPage() {
     activeTool,
     threadColor,
     activeView,
+    boardView,
     loading,
     dbError,
     graphStatus,
@@ -54,6 +56,7 @@ export default function CrimeLensMainPage() {
     canUndo,
     canRedo,
     setActiveView,
+    setBoardView,
     setActiveTool,
     setThreadColor,
     setSelectedEntityId,
@@ -84,7 +87,6 @@ export default function CrimeLensMainPage() {
   const [isResolutionOpen, setIsResolutionOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
-  const [isIntelOpen, setIsIntelOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCasesOpen, setIsCasesOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
@@ -94,6 +96,11 @@ export default function CrimeLensMainPage() {
   const importFileRef = useRef<HTMLInputElement>(null);
   const photoFileRef = useRef<HTMLInputElement>(null);
   const boardApiRef = useRef<WorldApi | null>(null);
+  const graphApiRef = useRef<GraphViewApi | null>(null);
+
+  // Chrome commands (zoom/center/focus/spawn) target whichever board rendering is live
+  const activeCanvasApi = () =>
+    boardView === 'graph' ? graphApiRef.current : boardApiRef.current;
 
   // Global Keyboard Shortcuts (Cmd+K search, V/C/L tools, Space pan, Cmd+Z undo, ESC close)
   useEffect(() => {
@@ -120,7 +127,6 @@ export default function CrimeLensMainPage() {
           [isImageModalOpen, () => setIsImageModalOpen(false)],
           [isIngestOpen, () => setIsIngestOpen(false)],
           [isResolutionOpen, () => setIsResolutionOpen(false)],
-          [isIntelOpen, () => setIsIntelOpen(false)],
           [isReportsOpen, () => setIsReportsOpen(false)],
           [isAssistantOpen, () => setIsAssistantOpen(false)],
         ];
@@ -147,7 +153,7 @@ export default function CrimeLensMainPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setActiveTool, undo, redo, isSearchOpen, isCasesOpen, isAuditLogsOpen, isImageModalOpen, isIngestOpen, isResolutionOpen, isIntelOpen, isReportsOpen, isAssistantOpen, setSelectedEntityId, setSelectedEntityIds]);
+  }, [setActiveTool, undo, redo, isSearchOpen, isCasesOpen, isAuditLogsOpen, isImageModalOpen, isIngestOpen, isResolutionOpen, isReportsOpen, isAssistantOpen, setSelectedEntityId, setSelectedEntityIds]);
 
   // Selected Entity
   const selectedEntity = entities.find((e) => e.id === selectedEntityId) || null;
@@ -188,14 +194,16 @@ export default function CrimeLensMainPage() {
 
   // Quick-add cards from the rail (reference defaults + spawn near camera target)
   const handleAddQuickCard = (type: string) => {
-    const at = boardApiRef.current?.getSpawnPoint() ?? { x: 0, y: 0 };
+    const at = activeCanvasApi()?.getSpawnPoint() ?? { x: 0, y: 0 };
     const spec = defaultSpecForType(type, at);
     const text = (spec.text as string) || '';
     addEntity({
       label: (spec.title as string) || text.split('\n')[0]?.slice(0, 42) || `New ${type.toUpperCase()}`,
       notes: spec.title ? text : text,
       visualType: type as InvestigationEntity['visualType'],
-      type: type === 'suspect' ? 'person' : type === 'doc' ? 'document' : 'evidence_item',
+      type:
+        VISUAL_TYPE_DEFAULT_ENTITY[type as keyof typeof VISUAL_TYPE_DEFAULT_ENTITY] ??
+        'evidence_item',
       boardPosition: { x: at.x, y: at.y, rotation: (Math.random() - 0.5) * 0.1 },
       attributes: {
         ...(spec.role ? { role: spec.role } : {}),
@@ -208,7 +216,7 @@ export default function CrimeLensMainPage() {
   const handlePhotoFile = (file: File) => {
     const rd = new FileReader();
     rd.onload = () => {
-      const at = boardApiRef.current?.getSpawnPoint() ?? { x: 0, y: 0 };
+      const at = activeCanvasApi()?.getSpawnPoint() ?? { x: 0, y: 0 };
       addEntity({
         label: file.name.replace(/\.[^.]+$/, ''),
         notes: file.name.replace(/\.[^.]+$/, ''),
@@ -268,18 +276,14 @@ export default function CrimeLensMainPage() {
     }
   };
 
-  const handleShare = () => {
-    try {
-      navigator.clipboard.writeText(location.href);
-    } catch (_) {}
-    toast('Case link copied to clipboard');
-  };
-
   const handleJumpToItem = (id: string) => {
     setActiveView('board');
     setSelectedEntityId(id);
     setSelectedEntityIds([id]);
-    boardApiRef.current?.focusItem(id);
+    // Focus in whichever representation is live; defer past the workspace mount
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => activeCanvasApi()?.focusItem(id))
+    );
   };
 
   const handleDeleteSelection = (ids: string[]) => {
@@ -322,6 +326,7 @@ export default function CrimeLensMainPage() {
       <CasebookChrome
         activeCase={activeCase}
         activeView={activeView}
+        boardView={boardView}
         graphStatus={graphStatus}
         activeTool={activeTool}
         threadColor={threadColor}
@@ -339,22 +344,21 @@ export default function CrimeLensMainPage() {
         onAddCard={handleAddQuickCard}
         onPickImageFile={() => photoFileRef.current?.click()}
         onJumpToItem={handleJumpToItem}
-        onZoomIn={() => boardApiRef.current?.zoomIn()}
-        onZoomOut={() => boardApiRef.current?.zoomOut()}
+        onZoomIn={() => activeCanvasApi()?.zoomIn()}
+        onZoomOut={() => activeCanvasApi()?.zoomOut()}
         onUndo={undo}
         onRedo={redo}
         onOpenCases={() => setIsCasesOpen(true)}
-        onShare={handleShare}
+        onShare={handleExport}
         onOpenSearch={() => setIsSearchOpen(true)}
         onOpenAudit={() => setIsAuditLogsOpen(true)}
         onExport={handleExport}
         onImport={() => importFileRef.current?.click()}
-        onCenterBoard={() => boardApiRef.current?.center()}
+        onCenterBoard={() => activeCanvasApi()?.center()}
         onResetSeed={handleResetSeed}
         onOpenAssistant={() => setIsAssistantOpen(true)}
         onOpenReports={() => setIsReportsOpen(true)}
         onOpenResolution={() => setIsResolutionOpen(true)}
-        onOpenIntel={() => setIsIntelOpen(true)}
       />
 
       <input
@@ -388,7 +392,7 @@ export default function CrimeLensMainPage() {
           activeTool={activeTool}
           threadColor={threadColor}
           filterTypes={filterTypes}
-          paused={activeView !== 'board'}
+          paused={activeView !== 'board' || boardView === 'graph'}
           apiRef={boardApiRef}
           onSelect={handleBoardSelect}
           onCommitPositions={handleCommitPositions}
@@ -399,15 +403,24 @@ export default function CrimeLensMainPage() {
           onToolRequest={setActiveTool}
         />
 
-        {activeView === 'graph' && (
+        {/* Graph representation — same graph data, same tools; paused while corkboard shows */}
+        {activeView === 'board' && (
           <KnowledgeGraphView
             entities={entities}
             relationships={relationships}
             selectedEntityId={selectedEntityId}
+            selectedEntityIds={selectedEntityIds}
+            activeTool={activeTool}
+            threadColor={threadColor}
             filterTypes={filterTypes}
-            onSelectEntity={(id) => {
-              setSelectedEntityId(id);
-            }}
+            paused={boardView === 'corkboard'}
+            apiRef={graphApiRef}
+            onSelect={handleBoardSelect}
+            onConnect={handleConnect}
+            onDeleteEntities={handleDeleteEntities}
+            onCommitPositions={handleCommitPositions}
+            onZoomChange={setZoomPct}
+            onToolRequest={setActiveTool}
             onAddPredictedLink={(pl) => {
               addRelationship({
                 sourceId: pl.sourceId,
@@ -438,10 +451,7 @@ export default function CrimeLensMainPage() {
             relationships={relationships}
             documents={documents}
             timelineEvents={timelineEvents}
-            onSelectEntity={(id) => {
-              setSelectedEntityId(id);
-              setActiveView('board');
-            }}
+            onSelectEntity={handleJumpToItem}
           />
         )}
 
@@ -450,13 +460,46 @@ export default function CrimeLensMainPage() {
             activeCase={activeCase}
             entities={entities}
             relationships={relationships}
-            onSelectEntity={(id) => {
-              setSelectedEntityId(id);
-              setActiveView('board');
-            }}
+            onSelectEntity={handleJumpToItem}
           />
         )}
       </div>
+
+      {/* Representation toggle — corkboard ⇄ graph renderings of the same evidence graph */}
+      {activeView === 'board' && (
+        <div
+          className="cb-tabs"
+          role="tablist"
+          aria-label="Board representation"
+          style={{
+            position: 'absolute',
+            right: 20,
+            bottom: 88,
+            zIndex: 40,
+          }}
+        >
+          <button
+            role="tab"
+            aria-selected={boardView === 'corkboard'}
+            className={`cb-tab${boardView === 'corkboard' ? ' active' : ''}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={() => setBoardView('corkboard')}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            Corkboard
+          </button>
+          <button
+            role="tab"
+            aria-selected={boardView === 'graph'}
+            className={`cb-tab${boardView === 'graph' ? ' active' : ''}`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            onClick={() => setBoardView('graph')}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            Graph
+          </button>
+        </div>
+      )}
 
       {/* Multi-selection floating actions */}
       {selectedEntityIds.length > 1 && activeView === 'board' && (
@@ -495,6 +538,7 @@ export default function CrimeLensMainPage() {
           onSelectEntity={(id) => {
             setSelectedEntityId(id);
             setSelectedEntityIds([id]);
+            if (activeView === 'board') activeCanvasApi()?.focusItem(id);
           }}
           onUpdate={updateEntity}
           onDelete={deleteEntity}
@@ -515,6 +559,7 @@ export default function CrimeLensMainPage() {
         onClose={() => setIsSearchOpen(false)}
         onSelectEntity={(id) => {
           setSelectedEntityId(id);
+          setSelectedEntityIds([id]);
         }}
       />
 
@@ -612,18 +657,6 @@ export default function CrimeLensMainPage() {
         }}
       />
 
-      {/* Public Intelligence Intake Modal */}
-      <PublicIntelModal
-        isOpen={isIntelOpen}
-        caseEntities={entities}
-        onClose={() => setIsIntelOpen(false)}
-        onTriage={(action, details) => logCaseEvent(action, 'intel', 'tip', details)}
-        onPromoteToCase={(tipText) => {
-          logCaseEvent('intel_promoted', 'intel', 'tip', 'Tip promoted to AI extraction staging');
-          setIngestPrefill(tipText);
-          setIsIngestOpen(true);
-        }}
-      />
     </main>
   );
 }

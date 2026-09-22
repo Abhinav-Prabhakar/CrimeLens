@@ -6,6 +6,7 @@ import {
   IngestedDocument,
   InvestigationTimelineEvent,
   EntityType,
+  defaultVisualTypeForEntityType,
 } from '../types/investigation';
 import { stringSimilarity } from '../resolution/identityMatcher';
 import { detectSuspiciousPatterns } from '../patterns/anomalyDetectors';
@@ -23,6 +24,10 @@ import {
   timelineEventToNodeProps,
   nodePropsToTimelineEvent,
   predicateToRelType,
+  entityTypeToLabel,
+  ENTITY_TYPE_TO_LABEL,
+  ALL_ENTITY_LABELS,
+  ENTITY_LABEL_PATTERN,
 } from './syncTransform';
 
 /**
@@ -86,11 +91,21 @@ export function ensureSchema(): Promise<void> {
     schemaReady = (async () => {
       const driver = requireDriver();
       const statements = [
+        // Relabel legacy generic :Entity nodes onto their type-specific label
+        ...Object.entries(ENTITY_TYPE_TO_LABEL).map(
+          ([type, label]) =>
+            `MATCH (e:Entity {type: '${type}'}) SET e:${label} REMOVE e:Entity`
+        ),
+        'MATCH (e:Entity) SET e:EvidenceItem REMOVE e:Entity',
+        'DROP CONSTRAINT entity_id_unique IF EXISTS',
+        'DROP INDEX entity_case_idx IF EXISTS',
         'CREATE CONSTRAINT case_id_unique IF NOT EXISTS FOR (c:Case) REQUIRE c.id IS UNIQUE',
-        'CREATE CONSTRAINT entity_id_unique IF NOT EXISTS FOR (e:Entity) REQUIRE e.id IS UNIQUE',
+        ...ALL_ENTITY_LABELS.map(
+          (label) =>
+            `CREATE CONSTRAINT entity_${label.toLowerCase()}_id_unique IF NOT EXISTS FOR (e:${label}) REQUIRE e.id IS UNIQUE`
+        ),
         'CREATE CONSTRAINT document_id_unique IF NOT EXISTS FOR (d:Document) REQUIRE d.id IS UNIQUE',
         'CREATE CONSTRAINT timeline_event_id_unique IF NOT EXISTS FOR (t:TimelineEvent) REQUIRE t.id IS UNIQUE',
-        'CREATE INDEX entity_case_idx IF NOT EXISTS FOR (e:Entity) ON (e.caseId)',
         'CREATE INDEX document_case_idx IF NOT EXISTS FOR (d:Document) ON (d.caseId)',
         'CREATE INDEX timeline_event_case_idx IF NOT EXISTS FOR (t:TimelineEvent) ON (t.caseId)',
       ];
@@ -147,9 +162,13 @@ export interface CaseGraph {
 
 export async function getCaseGraph(caseId: string): Promise<CaseGraph> {
   const [entitiesResult, relsResult] = await Promise.all([
-    run('MATCH (e:Entity {caseId: $caseId}) RETURN properties(e) AS props', { caseId }),
     run(
-      `MATCH (a:Entity {caseId: $caseId})-[r]->(b:Entity)
+      `MATCH (c:Case {id: $caseId})-[:HAS_ENTITY]->(e)
+       RETURN properties(e) AS props`,
+      { caseId }
+    ),
+    run(
+      `MATCH (:Case {id: $caseId})-[:HAS_ENTITY]->(a)-[r {caseId: $caseId}]->(b:${ENTITY_LABEL_PATTERN})
        RETURN properties(r) AS props, type(r) AS type, a.id AS sourceId, b.id AS targetId`,
       { caseId }
     ),
@@ -199,7 +218,7 @@ export async function upsertCase(caseItem: InvestigationCase): Promise<Investiga
 export async function deleteCase(caseId: string): Promise<void> {
   await run(
     `MATCH (c:Case {id: $caseId})
-     OPTIONAL MATCH (c)-[:HAS_ENTITY]->(e:Entity)
+     OPTIONAL MATCH (c)-[:HAS_ENTITY]->(e)
      OPTIONAL MATCH (c)-[:HAS_DOCUMENT]->(d:Document)
      OPTIONAL MATCH (c)-[:HAS_EVENT]->(t:TimelineEvent)
      DETACH DELETE c, e, d, t`,
@@ -210,9 +229,20 @@ export async function deleteCase(caseId: string): Promise<void> {
 // ----------------- Entity writes -----------------
 
 export async function upsertEntity(entity: InvestigationEntity): Promise<InvestigationEntity> {
+  const label = entityTypeToLabel(entity.type);
+  const otherLabels = ALL_ENTITY_LABELS.filter((l) => l !== label)
+    .map((l) => `e:${l}`)
+    .join(', ');
   await run(
-    `MERGE (e:Entity {id: $id})
-     SET e += $props
+    `OPTIONAL MATCH (x:${ENTITY_LABEL_PATTERN} {id: $id})
+     WITH collect(x) AS existing
+     FOREACH (_ IN CASE WHEN size(existing) = 0 THEN [1] ELSE [] END |
+       CREATE (n:${label} {id: $id})
+     )
+     WITH 1 AS _
+     MATCH (e:${ENTITY_LABEL_PATTERN} {id: $id})
+     SET e:${label}, e += $props
+     REMOVE ${otherLabels}
      WITH e
      MATCH (c:Case {id: $caseId})
      MERGE (c)-[:HAS_ENTITY]->(e)`,
@@ -222,12 +252,15 @@ export async function upsertEntity(entity: InvestigationEntity): Promise<Investi
 }
 
 export async function deleteEntityCascade(entityId: string): Promise<void> {
-  await run('MATCH (e:Entity {id: $id}) DETACH DELETE e', { id: entityId });
+  await run(`MATCH (e:${ENTITY_LABEL_PATTERN} {id: $id}) DETACH DELETE e`, { id: entityId });
 }
 
-/** Resolve the owning case of an entity via its caseId property (indexed). */
+/** Resolve the owning case of an entity via its HAS_ENTITY edge. */
 export async function getEntityCaseId(entityId: string): Promise<string | null> {
-  const { records } = await run('MATCH (e:Entity {id: $id}) RETURN e.caseId AS caseId', { id: entityId });
+  const { records } = await run(
+    'MATCH (c:Case)-[:HAS_ENTITY]->(e {id: $id}) RETURN c.id AS caseId',
+    { id: entityId }
+  );
   return records.length > 0 ? String(records[0].get('caseId')) : null;
 }
 
@@ -237,7 +270,7 @@ export async function upsertRelationship(rel: InvestigationRelationship): Promis
   // Relationship types cannot be parameterized; predicateToRelType whitelists it.
   const relType = predicateToRelType(rel.predicate);
   await run(
-    `MATCH (a:Entity {id: $sourceId}), (b:Entity {id: $targetId})
+    `MATCH (a:${ENTITY_LABEL_PATTERN} {id: $sourceId}), (b:${ENTITY_LABEL_PATTERN} {id: $targetId})
      CALL {
        WITH a, b
        OPTIONAL MATCH (a)-[existing {id: $id}]->(b)
@@ -256,7 +289,7 @@ export async function updateRelationshipProps(
   updates: Partial<InvestigationRelationship>
 ): Promise<InvestigationRelationship | null> {
   const existing = await run(
-    `MATCH (a:Entity)-[r {id: $id}]->(b:Entity)
+    `MATCH (a:${ENTITY_LABEL_PATTERN})-[r {id: $id}]->(b:${ENTITY_LABEL_PATTERN})
      RETURN properties(r) AS props, type(r) AS type, a.id AS sourceId, b.id AS targetId`,
     { id: relId }
   );
@@ -273,7 +306,7 @@ export async function updateRelationshipProps(
   // Type change requires recreating the edge; property-only changes SET in place
   if (updates.predicate && predicateToRelType(updates.predicate) !== predicateToRelType(current.predicate)) {
     await run(
-      `MATCH (a:Entity {id: $sourceId})-[r {id: $id}]->(b:Entity {id: $targetId}) DELETE r
+      `MATCH (a:${ENTITY_LABEL_PATTERN} {id: $sourceId})-[r {id: $id}]->(b:${ENTITY_LABEL_PATTERN} {id: $targetId}) DELETE r
        WITH a, b
        CREATE (a)-[nr:${predicateToRelType(next.predicate)}]->(b)
        SET nr = $props`,
@@ -328,7 +361,7 @@ export interface MergeResult {
 
 export async function mergeEntities(keptId: string, mergedId: string): Promise<MergeResult> {
   const read = await run(
-    `MATCH (k:Entity {id: $keptId}), (m:Entity {id: $mergedId})
+    `MATCH (k:${ENTITY_LABEL_PATTERN} {id: $keptId}), (m:${ENTITY_LABEL_PATTERN} {id: $mergedId})
      RETURN properties(k) AS kept, properties(m) AS merged`,
     { keptId, mergedId }
   );
@@ -354,7 +387,7 @@ export async function mergeEntities(keptId: string, mergedId: string): Promise<M
 
   // Recreate merged's edges against the kept entity (same ids/props), then drop the merged node
   const edges = await run(
-    `MATCH (m:Entity {id: $mergedId})-[r]-(other:Entity)
+    `MATCH (m:${ENTITY_LABEL_PATTERN} {id: $mergedId})-[r]-(other:${ENTITY_LABEL_PATTERN})
      WHERE other.id <> $mergedId
      RETURN properties(r) AS props, type(r) AS type,
             CASE WHEN startNode(r).id = $mergedId THEN 'out' ELSE 'in' END AS direction,
@@ -367,7 +400,7 @@ export async function mergeEntities(keptId: string, mergedId: string): Promise<M
   try {
     await session.executeWrite(async (tx) => {
       await tx.run(
-        `MATCH (e:Entity {id: $mergedId}) DETACH DELETE e`,
+        `MATCH (e:${ENTITY_LABEL_PATTERN} {id: $mergedId}) DETACH DELETE e`,
         { mergedId }
       );
       for (const record of edges.records) {
@@ -379,7 +412,7 @@ export async function mergeEntities(keptId: string, mergedId: string): Promise<M
         const targetId = direction === 'out' ? otherId : keptId;
         if (sourceId === targetId) continue; // drop self-loops created by the merge
         await tx.run(
-          `MATCH (a:Entity {id: $sourceId}), (b:Entity {id: $targetId})
+          `MATCH (a:${ENTITY_LABEL_PATTERN} {id: $sourceId}), (b:${ENTITY_LABEL_PATTERN} {id: $targetId})
            CREATE (a)-[r:${relType}]->(b)
            SET r = $props`,
           { sourceId, targetId, props: { ...props, updatedAt: new Date().toISOString() } }
@@ -507,7 +540,7 @@ export async function commitExtraction(
         confidence: item.confidence || 0.8,
       },
       boardPosition: collisionFreePosition(working),
-      visualType: item.visualType || 'suspect',
+      visualType: item.visualType || defaultVisualTypeForEntityType(type),
       notes: item.notes || `Extracted from ${docMeta.title}`,
       tags: ['ai_extracted', type],
       createdAt: new Date().toISOString(),
@@ -636,8 +669,8 @@ export async function graphStatus(): Promise<{
 }> {
   const { records } = await run(
     `OPTIONAL MATCH (c:Case) WITH count(DISTINCT c) AS caseCount
-     OPTIONAL MATCH (e:Entity) WITH caseCount, count(e) AS entityCount
-     OPTIONAL MATCH (a:Entity)-[r]->(b:Entity)
+     OPTIONAL MATCH (e:${ENTITY_LABEL_PATTERN}) WITH caseCount, count(e) AS entityCount
+     OPTIONAL MATCH (a:${ENTITY_LABEL_PATTERN})-[r]->(b:${ENTITY_LABEL_PATTERN})
      RETURN caseCount, entityCount, count(r) AS relationshipCount`
   );
   const row = records[0];

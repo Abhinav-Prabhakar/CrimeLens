@@ -26,9 +26,13 @@ import {
 import { GraphEngine } from '../graph/algorithms';
 
 const ACTIVE_CASE_STORAGE_KEY = 'crimelens.activeCaseId';
+const BOARD_VIEW_STORAGE_KEY = 'crimelens.boardView';
 const HISTORY_LIMIT = 40;
 
 export type GraphConnectionStatus = 'checking' | 'online' | 'offline';
+export type AppView = 'board' | 'timeline' | 'patterns';
+/** The evidence board workspace has two renderings of the same graph. */
+export type BoardViewMode = 'corkboard' | 'graph';
 
 interface HistorySnapshot {
   entities: InvestigationEntity[];
@@ -45,7 +49,12 @@ export function useInvestigationStore() {
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [activeTool, setActiveTool] = useState<'select' | 'connect' | 'lasso' | 'pan'>('select');
   const [threadColor, setThreadColor] = useState<'crimson' | 'twine' | 'cobalt' | 'shadow'>('crimson');
-  const [activeView, setActiveView] = useState<'board' | 'graph' | 'patterns' | 'timeline'>('board');
+  const [activeView, setActiveView] = useState<AppView>('board');
+  const [boardView, setBoardViewState] = useState<BoardViewMode>(() =>
+    typeof window !== 'undefined' && localStorage.getItem(BOARD_VIEW_STORAGE_KEY) === 'graph'
+      ? 'graph'
+      : 'corkboard'
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [dbError, setDbError] = useState<string>('');
   const [graphStatus, setGraphStatus] = useState<GraphConnectionStatus>('checking');
@@ -583,6 +592,7 @@ export function useInvestigationStore() {
     setEntities(snapshot.entities);
     setRelationships(snapshot.relationships);
     setSelectedEntityId(null);
+    setSelectedEntityIds([]);
     refreshHistoryFlags();
     await mirrorCache(activeCase);
   }, [entities, relationships, reconcileGraph, requireOnline, mirrorCache, activeCase]);
@@ -595,6 +605,7 @@ export function useInvestigationStore() {
     setEntities(snapshot.entities);
     setRelationships(snapshot.relationships);
     setSelectedEntityId(null);
+    setSelectedEntityIds([]);
     refreshHistoryFlags();
     await mirrorCache(activeCase);
   }, [entities, relationships, reconcileGraph, requireOnline, mirrorCache, activeCase]);
@@ -684,6 +695,7 @@ export function useInvestigationStore() {
     activeTool,
     threadColor,
     activeView,
+    boardView,
     loading,
     dbError,
     graphStatus,
@@ -693,6 +705,14 @@ export function useInvestigationStore() {
     canUndo,
     canRedo,
     setActiveView,
+    setBoardView: (v: BoardViewMode) => {
+      setBoardViewState(v);
+      try {
+        localStorage.setItem(BOARD_VIEW_STORAGE_KEY, v);
+      } catch {
+        /* private mode */
+      }
+    },
     setActiveTool,
     setThreadColor,
     setSelectedEntityId,

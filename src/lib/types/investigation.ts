@@ -22,6 +22,39 @@ export type BoardCardType =
   | 'key'
   | 'plan';
 
+/** Canonical card type for a graph entity type — the board is a rendering of the
+ * knowledge graph, so every entity always resolves to a paintable card. */
+export const ENTITY_TYPE_DEFAULT_VISUAL: Record<EntityType, BoardCardType> = {
+  person: 'suspect',
+  organization: 'doc',
+  location: 'map',
+  vehicle: 'photo',
+  phone: 'key',
+  account: 'doc',
+  document: 'doc',
+  event: 'news',
+  evidence_item: 'bag',
+};
+
+export function defaultVisualTypeForEntityType(type: EntityType | string | undefined): BoardCardType {
+  return ENTITY_TYPE_DEFAULT_VISUAL[type as EntityType] ?? 'bag';
+}
+
+/** Semantic entity type implied by a quick-add card type (rail buttons). */
+export const VISUAL_TYPE_DEFAULT_ENTITY: Record<BoardCardType, EntityType> = {
+  suspect: 'person',
+  map: 'location',
+  doc: 'document',
+  news: 'document',
+  statement: 'document',
+  plan: 'location',
+  photo: 'evidence_item',
+  print: 'evidence_item',
+  bag: 'evidence_item',
+  key: 'evidence_item',
+  sticky: 'evidence_item',
+};
+
 export type VerificationStatus =
   | 'verified_source'
   | 'ai_inferred'

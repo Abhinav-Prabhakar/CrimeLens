@@ -102,8 +102,8 @@ Both views read from and write to a single source of truth: the **Neo4j knowledg
                                              ▼
                        ┌──────────────────────────────────────┐
                        │   NEO4J PROPERTY GRAPH (SOR)         │
-                       │  (:Case)-[:HAS_ENTITY]->(:Entity)    │
-                       │  (:Entity)-[:CALLED|OWNS|...]->(...) │
+                       │  (:Case)-[:HAS_ENTITY]->(:Person|…)  │
+                       │  (:Person)-[:CALLED|OWNS|...]->(...) │
                        │  (:Case)-[:HAS_DOCUMENT|HAS_EVENT]-> │
                        └──────────────────────────────────────┘
 ```
@@ -383,7 +383,7 @@ to storage exactly as it does to AI.
 | Graph Element | Model | Key Properties |
 |---|---|---|
 | `(:Case)` | Case dossier node | `id`, `title`, `caseNumber`, `priority`, `incidentDate`, `tags`, … |
-| `(:Entity)` | Every board card / graph node | `id`, `caseId`, `type`, `label`, `aliases[]`, `attributesJson`, `confidence`, `status`, `visualType`, `boardX/Y/Rotation`, `provenanceJson` |
+| `(:Person)`, `(:Organization)`, `(:Location)`, `(:Vehicle)`, `(:Phone)`, `(:Account)`, `(:EvidenceDocument)`, `(:Event)`, `(:EvidenceItem)` | Board card / graph node — one label per `EntityType` | `id`, `caseId`, `type`, `label`, `aliases[]`, `attributesJson`, `confidence`, `status`, `visualType`, `boardX/Y/Rotation`, `provenanceJson` |
 | `(:Document)` | Ingested source record | `id`, `caseId`, `title`, `documentType`, `rawText`, extraction counts |
 | `(:TimelineEvent)` | Chronology event node | `id`, `caseId`, `timestamp`, `category`, `involvedEntityIds[]`, `source` |
 | `[:HAS_ENTITY]`, `[:HAS_DOCUMENT]`, `[:HAS_EVENT]` | Case → record ownership | — |
@@ -391,11 +391,13 @@ to storage exactly as it does to AI.
 
 Because predicates are real relationship types, the evidential network is directly queryable in
 Cypher — e.g. the entire money-layering chain is one traversal:
-`MATCH (a:Entity)-[:TRANSFERRED_FUNDS*2]->(c:Entity) RETURN a, c`.
+`MATCH (a:Account)-[:TRANSFERRED_FUNDS*2]->(c:Account) RETURN a, c`.
 
-**Automatically provisioned schema** (idempotent `IF NOT EXISTS`): uniqueness constraints on
-`Case.id`, `Entity.id`, `Document.id`, `TimelineEvent.id`; lookup indexes on `Entity.caseId`,
-`Document.caseId`, `TimelineEvent.caseId`.
+Entity types map to dedicated node labels (`document` → `EvidenceDocument`, since `:Document`
+denotes an ingested source record). **Automatically provisioned schema** (idempotent
+`IF NOT EXISTS`): uniqueness constraints on `Case.id`, `Document.id`, `TimelineEvent.id`, and
+`id` per entity label; lookup indexes on `Document.caseId`, `TimelineEvent.caseId`. Case-scoped
+entity reads traverse `HAS_ENTITY` edges rather than filtering on a generic label.
 
 **Property mapping** ([`syncTransform.ts`](file:///Users/abhinav/Projects/CrimeLens/src/lib/graph/syncTransform.ts)):
 Neo4j properties must be primitives, so nested `attributes`/`provenance` maps are JSON-encoded and

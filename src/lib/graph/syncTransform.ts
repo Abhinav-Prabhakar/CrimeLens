@@ -4,6 +4,7 @@ import {
   InvestigationRelationship,
   IngestedDocument,
   InvestigationTimelineEvent,
+  EntityType,
   RelationPredicate,
 } from '../types/investigation';
 
@@ -53,6 +54,34 @@ export function relTypeToPredicate(type: string | undefined, prop: unknown): Rel
   const typeUpper = String(type || '').toUpperCase();
   if ((VALID_PREDICATES as string[]).includes(typeUpper)) return typeUpper as RelationPredicate;
   return FALLBACK_PREDICATE;
+}
+
+// ----------------- Entity labels -----------------
+// Each entity type is a distinct node label (no generic :Entity label).
+// `document` maps to :EvidenceDocument because :Document is taken by
+// IngestedDocument nodes; `event` maps to :Event (:TimelineEvent is separate).
+
+export const ENTITY_TYPE_TO_LABEL: Record<EntityType, string> = {
+  person: 'Person',
+  organization: 'Organization',
+  location: 'Location',
+  vehicle: 'Vehicle',
+  phone: 'Phone',
+  account: 'Account',
+  document: 'EvidenceDocument',
+  event: 'Event',
+  evidence_item: 'EvidenceItem',
+};
+
+export const ALL_ENTITY_LABELS: string[] = Object.values(ENTITY_TYPE_TO_LABEL);
+
+/** `:A|B|...` label-disjunction pattern matching any entity node. */
+export const ENTITY_LABEL_PATTERN: string = ALL_ENTITY_LABELS.join('|');
+
+/** Whitelist-sanitize an entity type into a safe Cypher node label. */
+export function entityTypeToLabel(type: unknown): string {
+  const s = String(type || '').toLowerCase();
+  return (ENTITY_TYPE_TO_LABEL as Record<string, string>)[s] ?? 'EvidenceItem';
 }
 
 function safeJson(value: unknown): string {

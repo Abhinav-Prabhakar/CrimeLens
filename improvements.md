@@ -168,8 +168,9 @@
 **What changed**
 
 - **Knowledge graph lives in Neo4j.** Cases, entities, relationships, documents, and timeline
-  events persist as a native property graph (`:Case`, `:Entity`, `:Document`, `:TimelineEvent`
-  nodes; investigative predicates — `CALLED`, `TRANSFERRED_FUNDS`, `OWNS`, … — as real
+  events persist as a native property graph (`:Case`, per-type entity labels such as `:Person`
+  and `:Organization`, `:Document`, `:TimelineEvent` nodes; investigative predicates — `CALLED`,
+  `TRANSFERRED_FUNDS`, `OWNS`, … — as real
   relationship types with full evidential properties on the edge). Uniqueness constraints and
   lookup indexes are provisioned automatically.
 - **Server-side Graph API gateway** (`/api/graph/*`, 10 routes) backed by `neo4j-driver` v6.

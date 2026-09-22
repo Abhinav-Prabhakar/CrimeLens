@@ -5,18 +5,18 @@ import {
   Sparkles,
   FileText,
   Users,
-  Inbox,
-  History,
 } from 'lucide-react';
 import { CasebookTopBar, type KebabItem } from './CasebookTopBar';
 import { CasebookRail, type RailAppTool } from './CasebookRail';
 import { CasebookBottomBar, type AppView, type TimelineItem } from './CasebookBottomBar';
 import type { BoardTool, ThreadColorId } from '@/lib/board/casebook/types';
 import type { InvestigationCase } from '@/lib/types/investigation';
+import type { BoardViewMode } from '@/lib/store/useInvestigationStore';
 
 export interface CasebookChromeProps {
   activeCase: InvestigationCase | null;
   activeView: AppView;
+  boardView: BoardViewMode;
   graphStatus: 'checking' | 'online' | 'offline';
   activeTool: BoardTool;
   threadColor: ThreadColorId;
@@ -51,12 +51,10 @@ export interface CasebookChromeProps {
   onOpenAssistant(): void;
   onOpenReports(): void;
   onOpenResolution(): void;
-  onOpenIntel(): void;
 }
 
 const VIEW_LABELS: Record<AppView, string> = {
   board: 'Evidence board',
-  graph: 'Knowledge graph',
   timeline: 'Timeline',
   patterns: 'Anomalies',
 };
@@ -65,6 +63,7 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
   const {
     activeCase,
     activeView,
+    boardView,
     graphStatus,
     activeTool,
     threadColor,
@@ -97,7 +96,6 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
     onOpenAssistant,
     onOpenReports,
     onOpenResolution,
-    onOpenIntel,
   } = props;
 
   const kebabItems: KebabItem[] = [
@@ -112,8 +110,6 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
     { id: 'assistant', label: 'AI Assistant', icon: <Sparkles size={18} />, onSelect: onOpenAssistant },
     { id: 'reports', label: 'Reports', icon: <FileText size={18} />, onSelect: onOpenReports },
     { id: 'resolve', label: 'Resolution', icon: <Users size={18} />, onSelect: onOpenResolution },
-    { id: 'intel', label: 'Intel', icon: <Inbox size={18} />, onSelect: onOpenIntel },
-    { id: 'audit', label: 'Audit', icon: <History size={18} />, onSelect: onOpenAudit },
   ];
 
   return (
@@ -121,7 +117,11 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
       <CasebookTopBar
         caseTitle={activeCase?.title || 'Active Case'}
         caseNumber={activeCase?.caseNumber || 'CR-001'}
-        viewLabel={VIEW_LABELS[activeView]}
+        viewLabel={
+          activeView === 'board'
+            ? `Evidence board — ${boardView === 'graph' ? 'Graph' : 'Corkboard'}`
+            : VIEW_LABELS[activeView]
+        }
         onOpenCases={onOpenCases}
         onShare={onShare}
         onOpenSearch={onOpenSearch}
@@ -137,7 +137,6 @@ export const CasebookChrome: React.FC<CasebookChromeProps> = (props) => {
         onAddCard={onAddCard}
         onPickImageFile={onPickImageFile}
         appTools={appTools}
-        onExport={onExport}
       />
       <CasebookBottomBar
         filterTypes={filterTypes}

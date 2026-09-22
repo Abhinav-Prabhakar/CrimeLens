@@ -1093,6 +1093,7 @@ export function createWorld(opts: {
       if (spec.by) it.meta.by = spec.by;
       if (sigByItem.get(spec.id) !== sig) {
         sigByItem.set(spec.id, sig);
+        thumbnailByItem.delete(spec.id);
         swapMap(it, paintSpec(spec));
       }
       // store → world position sync (skip while the user is dragging it)

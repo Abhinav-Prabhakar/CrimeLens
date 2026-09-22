@@ -19,7 +19,6 @@ export interface CasebookRailProps {
   onAddCard(type: string): void; // 'doc'|'statement'|'sticky'|'suspect'|'map'|'news'|'print'
   onPickImageFile(): void; // 'Upload Image' button
   appTools: RailAppTool[]; // extra app actions, rendered as .rtool rows after a .rsep
-  onExport(): void;
 }
 
 const cssHex = (n: number) => '#' + n.toString(16).padStart(6, '0');
@@ -33,7 +32,6 @@ export const CasebookRail: React.FC<CasebookRailProps> = ({
   onAddCard,
   onPickImageFile,
   appTools,
-  onExport,
 }) => {
   return (
     <div id="rail">
@@ -310,23 +308,6 @@ export const CasebookRail: React.FC<CasebookRailProps> = ({
           ))}
         </>
       )}
-      <div className="rsep"></div>
-      <div
-        className="rtool"
-        id="exportBtn"
-        title="Export case JSON"
-        onClick={onExport}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M8 3l-5 9 5 9M16 3l5 9-5 9" />
-        </svg>
-        <span>Export</span>
-      </div>
     </div>
   );
 };

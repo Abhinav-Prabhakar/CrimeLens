@@ -446,11 +446,17 @@ Required shortcuts remain visible and functional:
 
 ### 9.2 Knowledge graph
 
+- A representation of the evidence board workspace, not a separate destination: a floating
+  segmented `Corkboard | Graph` control on the canvas switches between renderings of the same
+  entities and relationships. Selection, filters, tools (select/lasso/connect/pan), inspector,
+  zoom, and deletion behave identically in both.
 - Warm charcoal analysis canvas.
-- Nodes retain evidence-status colors.
+- Nodes retain evidence-status colors (default); community, entity-type, and centrality colorings
+  remain available.
 - Header uses compact dossier metrics.
 - Pathfinding and prediction tools look like instrument controls.
 - Prediction drawer uses amber provisional styling.
+- Node drags commit `boardPosition`, so graph-side arrangement is reflected on the corkboard.
 
 ### 9.3 Timeline
 
@@ -594,8 +600,8 @@ If a feature is moved or combined, its new location must be obvious, keyboard-ac
 ```text
 Browser client
 ├── Casebook shell
-│   ├── Three.js corkboard world
-│   ├── Knowledge graph canvas
+│   ├── Three.js corkboard world      ─┐ same evidence graph,
+│   ├── Knowledge graph canvas        ─┘ floating toggle on the board workspace
 │   ├── Timeline and temporal analysis
 │   └── Anomaly analysis
 ├── Investigation store

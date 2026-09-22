@@ -2,8 +2,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { BoardTool } from '@/lib/board/casebook/types';
 import { TYPE_LABEL } from '@/lib/board/casebook/types';
+import type { AppView as StoreAppView } from '@/lib/store/useInvestigationStore';
 
-export type AppView = 'board' | 'graph' | 'timeline' | 'patterns';
+export type AppView = StoreAppView;
 
 export interface TimelineItem {
   id: string;
@@ -180,28 +181,6 @@ export const CasebookBottomBar: React.FC<CasebookBottomBarProps> = ({
             <path d="M3 5h18M3 12h18M3 19h18M7 5v3M12 12v3M17 19v-3" />
           </svg>
           Timeline
-        </button>
-        <button
-          className="bpill"
-          id="graphBtn"
-          style={activeView === 'graph' ? activePillStyle : undefined}
-          onClick={() => {
-            setOpenPop(null);
-            onSelectView('graph');
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="5" cy="6" r="2" />
-            <circle cx="19" cy="6" r="2" />
-            <circle cx="12" cy="18" r="2" />
-            <path d="M6.5 7.5L11 16M17.5 7.5L13 16M7 6h10" />
-          </svg>
-          Graph
         </button>
         <button
           className="bpill"
