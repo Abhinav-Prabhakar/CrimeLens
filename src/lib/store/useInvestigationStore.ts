@@ -720,6 +720,7 @@ export function useInvestigationStore() {
     setFilterTypes,
     clearDbError: () => setDbError(''),
     init,
+    loadCaseState,
     refreshCaseList,
     switchCase,
     createCase,

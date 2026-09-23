@@ -62,6 +62,7 @@ export default function CrimeLensMainPage() {
     setSelectedEntityId,
     setSelectedEntityIds,
     setFilterTypes,
+    loadCaseState,
     switchCase,
     createCase,
     deleteCase,
@@ -638,6 +639,9 @@ export default function CrimeLensMainPage() {
         entities={entities}
         relationships={relationships}
         onClose={() => setIsAssistantOpen(false)}
+        onGraphMutated={() => {
+          if (activeCase) loadCaseState(activeCase.id);
+        }}
         onOpenIngest={() => {
           setIngestPrefill(undefined);
           setIsIngestOpen(true);

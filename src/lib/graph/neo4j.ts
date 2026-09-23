@@ -429,7 +429,8 @@ export async function mergeEntities(keptId: string, mergedId: string): Promise<M
 
 // ----------------- AI extraction commit (human-in-the-loop approved) -----------------
 
-function findExistingEntity(
+/** Exported for the AI assistant tool-executor, which reuses the same dedupe rules. */
+export function findExistingEntity(
   label: string,
   type: EntityType,
   existing: InvestigationEntity[]
@@ -454,7 +455,8 @@ function findExistingEntity(
   return best && bestSim >= 0.92 ? best : null;
 }
 
-function collisionFreePosition(existing: InvestigationEntity[]): { x: number; y: number } {
+/** Exported for the AI assistant tool-executor so assistant-created entities pin cleanly. */
+export function collisionFreePosition(existing: InvestigationEntity[]): { x: number; y: number } {
   const occupied = existing.map((e) => e.boardPosition);
   const farEnough = (x: number, y: number) => occupied.every((p) => Math.hypot(p.x - x, p.y - y) >= 13);
   for (let i = 0; i < 80; i++) {
@@ -467,7 +469,8 @@ function collisionFreePosition(existing: InvestigationEntity[]): { x: number; y:
   return { x: Math.cos(angle) * ring, y: Math.sin(angle) * ring * 0.7 };
 }
 
-function genId(prefix: string): string {
+/** Exported for the AI assistant tool-executor (ent_/rel_/ev_ id conventions). */
+export function genId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 

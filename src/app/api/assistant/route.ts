@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type Groq from 'groq-sdk';
 import { getGroqClient, GROQ_MODELS } from '@/lib/ai/groqClient';
 import { sanitizeInvestigativeInput } from '@/lib/ai/sanitize';
+import { ASSISTANT_TOOLS, executeAssistantTool, AssistantAction } from '@/lib/ai/assistantTools';
+
+/** Hard bound on completion→tool-calls→completion rounds per request. */
+const MAX_TOOL_ROUNDS = 5;
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,21 +39,23 @@ export async function POST(req: NextRequest) {
         content: sanitizeInvestigativeInput(m.text).cleanText.slice(0, 4000),
       }));
 
-    // Context format
+    // Context format — entity/relationship ids are included so the model can
+    // reference them precisely in tool calls.
     const contextSummary = caseContext
       ? `
+CASE ID: ${caseContext.id || 'unknown'}
 CASE TITLE: ${caseContext.title || 'Unknown'}
 LEAD INVESTIGATOR: ${caseContext.leadInvestigator || 'Unassigned'}
 ENTITIES RECORDED (${caseContext.entities?.length || 0}):
 ${(caseContext.entities || [])
   .slice(0, 30)
-  .map((e: any) => `- [${e.type.toUpperCase()}] ${e.label} (Confidence: ${(e.confidence * 100).toFixed(0)}%, Status: ${e.status})`)
+  .map((e: any) => `- [${e.type.toUpperCase()}] ${e.label} (ID: ${e.id}, Confidence: ${(e.confidence * 100).toFixed(0)}%, Status: ${e.status})`)
   .join('\n')}
 
 KNOWN RELATIONSHIPS (${caseContext.relationships?.length || 0}):
 ${(caseContext.relationships || [])
   .slice(0, 40)
-  .map((r: any) => `- ${r.sourceLabel || r.sourceId} --[${r.predicate} (${r.label || ''})]--> ${r.targetLabel || r.targetId} (Conf: ${(r.confidence * 100).toFixed(0)}%)`)
+  .map((r: any) => `- [ID: ${r.id}] ${r.sourceLabel || r.sourceId} --[${r.predicate} (${r.label || ''})]--> ${r.targetLabel || r.targetId} (Conf: ${(r.confidence * 100).toFixed(0)}%)`)
   .join('\n')}
 `
       : 'No explicit case context passed.';
@@ -58,6 +65,12 @@ You are CrimeLens Senior Investigative Analyst & Forensic Intelligence Advisor.
 You assist detectives and intelligence officers in evaluating criminal network structures,
 verifying evidence provenance, formulating alternative hypotheses, and suggesting investigative leads.
 
+You may use the provided tools to modify the investigation case directly (creating/updating/deleting
+entities, relationships, merges and timeline events) when the investigator asks for changes or when a
+clearly-supported correction is implied. Only mutate the case when the request is reasonably clear, and
+always confirm in your reply exactly which actions you performed. Every tool result is authoritative —
+if a tool reports an error, relay it honestly rather than claiming success.
+
 ETHICAL & RESPONSIBLE AI CONSTRAINTS:
 1. NEVER declare guilt or make definitive legal pronouncements of criminal culpability.
 2. Treat all correlations and predictions as LEADS requiring human verification.
@@ -66,14 +79,11 @@ ETHICAL & RESPONSIBLE AI CONSTRAINTS:
 5. If ambiguous evidence exists, provide MULTIPLE ALTERNATIVE HYPOTHESES with supporting and contradicting observations.
 `;
 
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODELS.PRIMARY_REASONING,
-      temperature: 0.2,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: `
+    const messages: Groq.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: `
 CURRENT CASE EVIDENCE CONTEXT:
 ${contextSummary}
 
@@ -85,11 +95,69 @@ INVESTIGATOR QUERY / REQUEST:
 ${sanitized.cleanText}
 </investigative_text_to_analyze>
 `,
-        },
-      ],
-    });
+      },
+    ];
 
-    const reply = completion.choices[0]?.message?.content;
+    const caseId: string | undefined = caseContext?.id;
+    const actions: AssistantAction[] = [];
+    let reply: string | null = null;
+
+    // Bounded tool-call loop: completion → tool calls → tool results → re-complete.
+    // Tool failures are appended as role:"tool" results so the model can recover.
+    for (let round = 0; round < MAX_TOOL_ROUNDS && reply === null; round++) {
+      const completion = await groq.chat.completions.create({
+        model: GROQ_MODELS.PRIMARY_REASONING,
+        temperature: 0.2,
+        messages,
+        tools: ASSISTANT_TOOLS,
+        tool_choice: 'auto',
+      });
+
+      const message = completion.choices[0]?.message;
+      if (!message) break;
+
+      const toolCalls = message.tool_calls ?? [];
+      if (toolCalls.length === 0) {
+        reply = message.content;
+        break;
+      }
+
+      messages.push({
+        role: 'assistant',
+        content: message.content ?? '',
+        tool_calls: toolCalls,
+      });
+
+      for (const call of toolCalls) {
+        if (call.type !== 'function') {
+          messages.push({
+            role: 'tool',
+            tool_call_id: call.id,
+            content: JSON.stringify({ ok: false, error: 'Only function tool calls are supported.' }),
+          });
+          continue;
+        }
+        const action = await executeAssistantTool(call.function.name, call.function.arguments, caseId);
+        actions.push(action);
+        messages.push({
+          role: 'tool',
+          tool_call_id: call.id,
+          content: JSON.stringify({ ok: action.ok, result: action.summary }),
+        });
+      }
+    }
+
+    // Tool budget exhausted without a final answer — force a summarizing reply.
+    if (reply === null) {
+      const finalCompletion = await groq.chat.completions.create({
+        model: GROQ_MODELS.PRIMARY_REASONING,
+        temperature: 0.2,
+        messages,
+        tool_choice: 'none',
+      });
+      reply = finalCompletion.choices[0]?.message?.content ?? null;
+    }
+
     if (!reply) {
       return NextResponse.json({ error: 'Groq assistant returned an empty response.' }, { status: 500 });
     }
@@ -98,6 +166,7 @@ ${sanitized.cleanText}
       success: true,
       source: 'groq_llama_ai',
       response: reply,
+      actions,
     });
   } catch (err: any) {
     console.error('Assistant API error:', err);

@@ -22,8 +22,17 @@ import {
   HelpCircle,
   FileUp,
   Camera,
+  Wrench,
+  AlertTriangle,
 } from 'lucide-react';
 import { InvestigationCase, InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
+
+/** Mirrors the action envelope returned by /api/assistant (server-side tool calls). */
+interface AssistantAction {
+  tool: string;
+  summary: string;
+  ok: boolean;
+}
 
 interface AssistantDrawerProps {
   isOpen: boolean;
@@ -34,6 +43,8 @@ interface AssistantDrawerProps {
   onSelectEntity?: (id: string) => void;
   onOpenIngest?: () => void;
   onOpenImageAnalysis?: () => void;
+  /** Invoked when the assistant performed graph mutations — parent should reload case state. */
+  onGraphMutated?: () => void;
 }
 
 interface ChatMessage {
@@ -41,6 +52,7 @@ interface ChatMessage {
   sender: 'user' | 'assistant';
   text: string;
   timestamp: string;
+  actions?: AssistantAction[];
 }
 
 const introMessage = (
@@ -85,6 +97,7 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
   onSelectEntity,
   onOpenIngest,
   onOpenImageAnalysis,
+  onGraphMutated,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     introMessage(activeCase, entities, relationships),
@@ -138,6 +151,7 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
             .slice(-8)
             .map((m) => ({ role: m.sender, text: m.text })),
           caseContext: {
+            id: activeCase?.id,
             title: activeCase?.title,
             caseNumber: activeCase?.caseNumber,
             leadInvestigator: activeCase?.leadInvestigator,
@@ -154,13 +168,18 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
         throw new Error(data.error || 'Failed to generate intelligence reasoning');
       }
 
+      const actions: AssistantAction[] = Array.isArray(data.actions) ? data.actions : [];
       const botMsg: ChatMessage = {
         id: `msg_${Date.now()}_a`,
         sender: 'assistant',
         text: data.response || 'No response generated.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        actions: actions.length > 0 ? actions : undefined,
       };
       setMessages((prev) => [...prev, botMsg]);
+
+      // The assistant mutated the case graph via tool calls — reload authoritative state
+      if (actions.length > 0) onGraphMutated?.();
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
@@ -378,6 +397,26 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
                   {m.text}
                 </ReactMarkdown>
               </div>
+
+              {/* Performed case mutations (tool calls) */}
+              {m.actions && m.actions.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-noir-700 space-y-1">
+                  <div className="cb-eyebrow flex items-center gap-1.5">
+                    <Wrench className="w-3 h-3 text-amber-accent" />
+                    <span>Case actions performed</span>
+                  </div>
+                  {m.actions.map((a, i) => (
+                    <div key={i} className="cb-mono flex items-center gap-1.5 text-[10px]">
+                      {a.ok ? (
+                        <Check className="w-3 h-3 cb-green flex-shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-3 h-3 text-crimson flex-shrink-0" />
+                      )}
+                      <span className={a.ok ? 'text-noir-300' : 'text-crimson'}>{a.summary}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
