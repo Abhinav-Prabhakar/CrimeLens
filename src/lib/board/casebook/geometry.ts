@@ -477,6 +477,10 @@ export class Rope implements RopeLike {
       dt2 = dt * dt;
     this.a.get(_pa);
     this.b.get(_pb);
+    // real endpoint span, before the grow-in lerp — baseLen tracking must use
+    // this so a rope still growing in doesn't reel its slack down to the
+    // lerped (shortened) span
+    const span = _pa.distanceTo(_pb);
     if (this.grow < 1) _pb.lerpVectors(_pa, _pb, this.grow);
     const za = _pa.z,
       zb = _pb.z,
@@ -500,8 +504,15 @@ export class Rope implements RopeLike {
     }
     if (this.live) {
       // spool feeds thread out as you pull away; slack stays when you come back
-      const d = _pa.distanceTo(_pb);
-      this.baseLen = Math.max(this.baseLen, d * 1.06);
+      this.baseLen = Math.max(this.baseLen, span * 1.06);
+    } else if (!this.dying) {
+      // ...but a tied thread reels back in: its resting length relaxes toward
+      // the natural slack of the current span (same formula the constructor
+      // uses), so a rope stretched by dragging its pins apart tautens again
+      // when they come closer instead of keeping the stale stretched length
+      const target = Math.max(span * this.slackF, 4);
+      if (this.baseLen > target)
+        this.baseLen += (target - this.baseLen) * 0.08;
     }
     if (!this.dying) {
       pts[0].copy(_pa);

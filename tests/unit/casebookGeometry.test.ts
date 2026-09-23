@@ -354,6 +354,51 @@ describe('Rope', () => {
     expect(end.y).toBeCloseTo(3, 4);
   });
 
+  it('reels slack back in when endpoints come closer after a stretch', () => {
+    // movable b anchor: stretch the span, then bring it back closer than the
+    // span the rope was tied at — the resting length must shrink again
+    const bPos = new THREE.Vector3(10, 5, 1);
+    const r = new Rope(
+      fixedAnchor(0, 5, 1),
+      { item: null, get: (v) => v.copy(bPos) },
+      0xb01722,
+    );
+    gsap.killTweensOf(r);
+    r.grow = 1;
+    for (let i = 0; i < 240; i++) r.step(1 / 60, i / 60);
+    const tiedLen = r.baseLen;
+
+    // drag the endpoints apart: rope goes taut, resting length unchanged
+    bPos.set(40, 5, 1);
+    for (let i = 0; i < 240; i++) r.step(1 / 60, i / 60);
+    expect(r.baseLen).toBeCloseTo(tiedLen, 6);
+    const stretchedLen = r.pts
+      .slice(1)
+      .reduce((acc, p, i) => acc + p.distanceTo(r.pts[i]), 0);
+    expect(stretchedLen).toBeGreaterThan(39); // ~1.02 * span
+
+    // bring them back closer than the tie span: the thread reels in
+    bPos.set(6, 5, 1);
+    for (let i = 0; i < 400; i++) r.step(1 / 60, i / 60);
+    expect(r.baseLen).toBeLessThan(tiedLen);
+    expect(r.baseLen).toBeCloseTo(Math.max(6 * r.slackF, 4), 1);
+    // and the drape is visibly shallower — a stale length-11 thread over a
+    // 6-unit span would hang down near y≈0; reeled in it stays well above
+    const sag = Math.min(...r.pts.slice(1, -1).map((p) => p.y));
+    expect(sag).toBeGreaterThan(1.5);
+    for (const p of r.pts) expect(Number.isFinite(p.x + p.y + p.z)).toBe(true);
+  });
+
+  it('keeps its resting length while endpoints stay at the tied span', () => {
+    const r = new Rope(fixedAnchor(0, 5, 1), fixedAnchor(10, 5, 1), 0xb01722);
+    gsap.killTweensOf(r);
+    r.grow = 1;
+    for (let i = 0; i < 240; i++) r.step(1 / 60, i / 60);
+    const len0 = r.baseLen;
+    for (let i = 0; i < 240; i++) r.step(1 / 60, i / 60);
+    expect(r.baseLen).toBeCloseTo(len0, 6);
+  });
+
   it('kill() flags the rope as dying and frees the b end', () => {
     const r = new Rope(fixedAnchor(0, 1, 1), fixedAnchor(8, 1, 1), 0xb01722);
     r.kill();
