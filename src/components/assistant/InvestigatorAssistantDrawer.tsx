@@ -24,6 +24,8 @@ import {
   Camera,
   Wrench,
   AlertTriangle,
+  Globe,
+  Share2,
 } from 'lucide-react';
 import { InvestigationCase, InvestigationEntity, InvestigationRelationship } from '@/lib/types/investigation';
 
@@ -81,6 +83,7 @@ Attach a document or evidence image with the buttons beside the composer — ext
 });
 
 const ACTION_PROMPTS = [
+  { label: '🌐 Social Media Intel', prompt: 'SOCIAL_MEDIA_TRIGGER' },
   { label: '🔗 Trace Marlowe ↔ Vance', prompt: 'Show me the complete evidential connection between Daniel Vance and Julian Marlowe.' },
   { label: '🧠 Multi-Hypothesis Analysis', prompt: 'Generate 3 distinct alternative hypotheses for the Pier 9 warehouse breach with supporting and contradictory evidence.' },
   { label: '💰 Trace Money Flow', prompt: 'Analyze the $450,000 financial layering route from Apex Maritime to Elena Rostova. What are the key anomalies?' },
@@ -107,6 +110,8 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isSocialIntelModalOpen, setIsSocialIntelModalOpen] = useState(false);
+  const [socialMediaTargetName, setSocialMediaTargetName] = useState('');
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -125,9 +130,65 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
 
   if (!isOpen) return null;
 
+  const handleFetchSocialIntel = async (nameInput?: string) => {
+    const targetName = (nameInput || socialMediaTargetName || inputQuery).trim();
+    if (!targetName || isLoading) return;
+
+    setIsSocialIntelModalOpen(false);
+    setSocialMediaTargetName('');
+
+    const userMsg: ChatMessage = {
+      id: `msg_${Date.now()}_u`,
+      sender: 'user',
+      text: `🌐 **Social Media Intel Lookup**: Target \`${targetName}\``,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/social-intel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personName: targetName }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to generate social media intelligence report');
+      }
+
+      const botMsg: ChatMessage = {
+        id: `msg_${Date.now()}_a`,
+        sender: 'assistant',
+        text: data.response || 'No social media intelligence returned.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err: any) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg_${Date.now()}_err`,
+          sender: 'assistant',
+          text: `> ⚠️ **Social Media Intel Error**\n${err.message || 'Unable to retrieve social media dossier.'}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = async (queryText?: string) => {
     const q = (queryText || inputQuery).trim();
     if (!q || isLoading) return;
+
+    if (q === 'SOCIAL_MEDIA_TRIGGER') {
+      setIsSocialIntelModalOpen(true);
+      return;
+    }
 
     const userMsg: ChatMessage = {
       id: `msg_${Date.now()}_u`,
@@ -289,6 +350,14 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
             {item.label}
           </button>
         ))}
+        <button
+          onClick={() => setIsSocialIntelModalOpen(true)}
+          className="cb-btn cb-btn-ghost cb-btn-sm flex-shrink-0 whitespace-nowrap text-amber-accent"
+          title="Analyze Social Media Profile"
+        >
+          <Globe className="w-3.5 h-3.5 text-amber-accent" />
+          Social Media Intel
+        </button>
         {(onOpenIngest || onOpenImageAnalysis) && (
           <span className="flex-shrink-0 self-center h-4 border-l border-noir-700 mx-0.5" aria-hidden="true" />
         )}
@@ -435,7 +504,54 @@ export const InvestigatorAssistantDrawer: React.FC<AssistantDrawerProps> = ({
       </div>
 
       {/* Input Field */}
-      <div className="cb-dossier-foot p-3 flex items-center gap-2">
+      <div className="cb-dossier-foot p-3 flex items-center gap-2 relative">
+        <button
+          onClick={() => setIsSocialIntelModalOpen(true)}
+          className="cb-btn cb-btn-ghost cb-btn-icon flex-shrink-0 text-amber-accent"
+          title="Social Media Intel Lookup"
+        >
+          <Globe className="w-[18px] h-[18px]" />
+        </button>
+
+        {/* Social Media Target Input Modal / Popover */}
+        {isSocialIntelModalOpen && (
+          <div className="absolute bottom-14 left-3 right-3 bg-noir-900 border border-amber-accent/40 rounded-lg p-3 shadow-xl z-50 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-amber-accent font-bold text-xs uppercase tracking-wider">
+                <Globe className="w-4 h-4" />
+                <span>Social Media Intel Lookup</span>
+              </div>
+              <button
+                onClick={() => setIsSocialIntelModalOpen(false)}
+                className="cb-btn cb-btn-ghost cb-btn-icon"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-[11px] text-noir-300">
+              Enter target person or handle name to generate a social media evidence dossier:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                autoFocus
+                value={socialMediaTargetName}
+                onChange={(e) => setSocialMediaTargetName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleFetchSocialIntel()}
+                placeholder="e.g. Daniel Vance or Julian Marlowe..."
+                className="cb-input flex-1 cb-mono text-[11px]"
+              />
+              <button
+                onClick={() => handleFetchSocialIntel()}
+                disabled={isLoading || !socialMediaTargetName.trim()}
+                className="cb-btn cb-btn-primary text-xs"
+              >
+                Fetch Intel
+              </button>
+            </div>
+          </div>
+        )}
+
         {onOpenIngest && (
           <button
             onClick={onOpenIngest}
